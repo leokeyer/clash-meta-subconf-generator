@@ -669,28 +669,37 @@ async function fetchSubscription() {
 
   var newProxies = [];
 
-  // 尝试 1: 直接解析为 YAML（Clash 配置格式）
-  try {
-    var config = jsyaml.load(rawText);
-    if (config && config.proxies && Array.isArray(config.proxies)) {
-      newProxies = config.proxies;
+  // 通用函数：从文本中提取 proxies
+  function extractProxiesFromText(txt) {
+    var result = [];
+    // 方式 A: YAML 格式（包含 proxies: 键）
+    try {
+      var cfg = jsyaml.load(txt);
+      if (cfg && cfg.proxies && Array.isArray(cfg.proxies)) {
+        return cfg.proxies;
+      }
+    } catch (_) {}
+
+    // 方式 B: 逐行解析代理链接（ss://, vmess://, trojan:// 等）
+    var lines = txt.split('\n').filter(function(l) { return l.trim(); });
+    for (var i = 0; i < lines.length; i++) {
+      var p = parseLink(lines[i]);
+      if (p) result.push(p);
     }
-  } catch (_yamlErr) {
-    // 尝试 2: 先 base64 解码再解析 YAML（部分订阅链接的格式）
+    return result;
+  }
+
+  // 尝试 1: 原始文本直接解析（YAML 或代理链接列表）
+  newProxies = extractProxiesFromText(rawText);
+
+  // 尝试 2: base64 解码后再解析（订阅链接常见格式）
+  if (newProxies.length === 0) {
     try {
       var decoded = atob(rawText.trim());
-      var config2 = jsyaml.load(decoded);
-      if (config2 && config2.proxies && Array.isArray(config2.proxies)) {
-        newProxies = config2.proxies;
+      if (decoded) {
+        newProxies = extractProxiesFromText(decoded);
       }
-    } catch (_b64Err) {
-      // 尝试 3: 按行解析为代理链接
-      var lines = rawText.split('\n').filter(function(l) { return l.trim(); });
-      for (var i = 0; i < lines.length; i++) {
-        var proxy = parseLink(lines[i]);
-        if (proxy) newProxies.push(proxy);
-      }
-    }
+    } catch (_) {}
   }
 
   if (newProxies.length === 0) {
