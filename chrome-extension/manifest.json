@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Clash Meta 配置生成器",
+  "version": "1.0.0",
+  "description": "通过订阅链接或代理链接批量导入节点，生成 Clash Meta 高级配置文件（链式代理、多出口监听器）",
+  "permissions": ["storage", "downloads"],
+  "host_permissions": ["https://*/*", "http://*/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Clash Meta 配置生成器"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

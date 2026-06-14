@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clash Meta 配置生成器</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<div class="steps" id="app">
+  <div class="header">
+    <h1>Clash Meta 配置生成器</h1>
+    <p>粘贴订阅链接或节点链接，生成 Meta 配置</p>
+  </div>
+
+  <!-- 第一步：输入 -->
+  <div class="step">
+    <div class="step-header"><span class="step-num">1</span> 节点导入</div>
+
+    <div class="form-group">
+      <label>订阅链接（可添加多个，分别抓取后合并，自动检测节点国家）</label>
+      <div id="subList"></div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="btn btn-outline btn-sm" id="btnAddSub">＋ 添加订阅</button>
+        <button class="btn btn-primary btn-sm" id="btnFetchSub">全部抓取</button>
+      </div>
+      <span id="subFetchStatus" style="display:inline-block;margin-top:6px;"></span>
+    </div>
+
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px;">
+      <label for="linkInput">或手动粘贴节点链接（每行一个，支持 ss/vmess/vless/trojan/hysteria2/tuic）</label>
+      <textarea id="linkInput" placeholder="ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpsWnB5VkF6SE1qS3ZqS0BzZy5leGFtcGxlLmNvbTo4Mzg4#SS测试
+vmess://eyJ2IjoiMiIsInBzIjoiVk1lc3MtV1MiLCJhZGQiOiJ2bS5leGFtcGxlLmNvbSIsInBvcnQiOiI0NDMiLCJpZCI6ImFiY2RlZmdoLTEyMzQtNTY3OC1hYmNkLWVmZ2hpamtsbW5vcCIsImFpZCI6IjAiLCJuZXQiOiJ3cyIsInR5cGUiOiJub25lIiwiaG9zdCI6IiIsInBhdGgiOiIvdm1lc3MifQ=="></textarea>
+      <div style="margin-top:6px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" id="btnParseLinks">解析链接</button>
+        <span id="linkStatus"></span>
+      </div>
+      <div id="proxyPreview"></div>
+    </div>
+
+    <div class="form-group">
+      <label for="yamlInput">或粘贴现有 YAML 配置（可选，自动提取 proxies）</label>
+      <textarea id="yamlInput" placeholder="proxies:
+  - name: 香港 01
+    type: vmess
+    server: hk1.example.com
+    port: 443
+    uuid: xxxxx
+    alterId: 0
+    cipher: auto
+    udp: true" style="min-height:80px;"></textarea>
+    </div>
+  </div>
+
+  <!-- 第二步：功能设置 -->
+  <div class="step">
+    <div class="step-header"><span class="step-num">2</span> 功能设置</div>
+
+    <!-- 模式 A -->
+    <div class="mode-section">
+      <div class="mode-title">模式 A — 链式代理（Dialer Proxy）</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="relayProxy">跳板节点 (B)</label>
+          <select id="relayProxy"><option value="">-- 选择跳板节点 --</option></select>
+        </div>
+        <div class="form-group">
+          <label for="exitProxy">出口节点 (A)</label>
+          <select id="exitProxy"><option value="">-- 选择出口节点 --</option></select>
+        </div>
+      </div>
+      <p style="font-size:.72rem;color:var(--text-secondary);">在出口节点 A 中注入 dialer-proxy: B，流量经跳板 B 转发至出口 A。</p>
+    </div>
+
+    <!-- 模式 B -->
+    <div class="mode-section">
+      <div class="mode-title">模式 B — 多出口监听器</div>
+      <div class="toggle-row" style="margin-bottom:8px;">
+        <input type="checkbox" id="enableListeners" checked>
+        <label for="enableListeners">为每个节点生成独立监听端口</label>
+      </div>
+      <div class="form-row-3" id="listenerSettings">
+        <div class="form-group">
+          <label for="listenerType">监听器类型</label>
+          <select id="listenerType">
+            <option value="mixed">mixed</option>
+            <option value="http">http</option>
+            <option value="socks">socks</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="startPort">起始端口</label>
+          <input type="number" id="startPort" value="8000" min="1024" max="65535">
+        </div>
+        <div class="form-group">
+          <label for="listenAddr">监听地址</label>
+          <input type="text" id="listenAddr" value="127.0.0.1">
+        </div>
+      </div>
+      <p style="font-size:.72rem;color:var(--text-secondary);">开启后自动生成完整 DNS（fake-ip 模式）配置，每个节点递增分配端口。</p>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btnGenerate">生成配置</button>
+      <span id="genStatus"></span>
+    </div>
+  </div>
+
+  <!-- 第三步：预览导出 -->
+  <div class="step">
+    <div class="step-header"><span class="step-num">3</span> 预览与导出</div>
+    <div class="form-group">
+      <label for="outputYaml">生成的 YAML 配置</label>
+      <textarea id="outputYaml" readonly placeholder="点击「生成配置」后在此预览..."></textarea>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btnCopy">复制到剪贴板</button>
+      <button class="btn btn-outline" id="btnDownload">保存为 .yaml 文件</button>
+      <span id="exportStatus"></span>
+    </div>
+  </div>
+</div>
+
+<script src="lib/js-yaml.min.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
