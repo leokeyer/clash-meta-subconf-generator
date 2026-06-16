@@ -297,39 +297,33 @@ function parseLink(link) {
 
 // ======================== UI 逻辑 ========================
 
-/** 解析所有链接并更新全局 parsedProxies */
+/** 解析手动粘贴的链接，标记来源后加入列表（不查国家，统一查） */
 function parseAllLinks() {
   const input = document.getElementById('linkInput').value;
+  const importName = document.getElementById('manualImportName').value.trim() || '手动';
   const lines = input.split('\n').filter(line => line.trim());
   const newProxies = [];
 
   for (const line of lines) {
     const proxy = parseLink(line);
-    if (proxy) newProxies.push(proxy);
-  }
-
-  if (newProxies.length > 0) {
-    const existingNames = new Set(parsedProxies.map(p => p.name));
-    const uniqueNew = newProxies.filter(p => {
-      if (existingNames.has(p.name)) return false;
-      existingNames.add(p.name);
-      return true;
-    });
-    parsedProxies = [...parsedProxies, ...uniqueNew];
-    showToast('linkStatus', `解析成功，新增 ${uniqueNew.length} 个节点（总计 ${parsedProxies.length} 个）`, 'success');
-  } else {
-    if (parsedProxies.length === 0) {
-      showToast('linkStatus', '未识别到有效节点链接，请检查格式', 'warning');
-    } else {
-      showToast('linkStatus', '未识别到新的有效节点链接', 'warning');
+    if (proxy) {
+      proxy._source = importName;
+      proxy._origName = proxy.name;
+      proxy._checked = false;
+      newProxies.push(proxy);
     }
   }
 
+  if (newProxies.length === 0) {
+    showToast('linkStatus', parsedProxies.length === 0 ? '未识别到有效节点链接' : '未识别到新的有效节点链接', 'warning');
+    return;
+  }
+
+  // 合并去重（按 server+port 去重）
+  mergeProxies(newProxies);
+  showToast('linkStatus', `已导入 ${newProxies.length} 个节点（总计 ${parsedProxies.length} 个），点击「检测国家」统一查询`, 'info');
   renderProxyPreview();
   updateProxySelects();
-  if (baseConfig) {
-    baseConfig.proxies = parsedProxies;
-  }
 }
 
 /**
@@ -378,10 +372,56 @@ async function fetchOneSubscription(url) {
   return proxies;
 }
 
-// ======================== GeoIP 国家检测 ========================
+// ======================== 国家检测（GeoIP + 名称提取） ========================
 
 // 国家名称缓存: server -> 中文国名
 const countryCache = {};
+
+// 旗帜 emoji → 中文国名
+const FLAG_TO_COUNTRY = {
+  '🇭🇰': '香港', '🇺🇸': '美国', '🇯🇵': '日本', '🇳🇱': '荷兰',
+  '🇷🇺': '俄罗斯', '🇩🇪': '德国', '🇨🇭': '瑞士', '🇫🇷': '法国',
+  '🇬🇧': '英国', '🇸🇪': '瑞典', '🇧🇬': '保加利亚', '🇦🇹': '奥地利',
+  '🇮🇪': '爱尔兰', '🇹🇷': '土耳其', '🇭🇺': '匈牙利', '🇰🇷': '韩国',
+  '🇨🇳': '中国', '🇨🇦': '加拿大', '🇦🇺': '澳大利亚', '🇦🇪': '阿联酋',
+  '🇮🇳': '印度', '🇮🇩': '印尼', '🇧🇷': '巴西', '🇦🇷': '阿根廷',
+  '🇨🇱': '智利', '🇸🇬': '新加坡', '🇲🇾': '马来西亚', '🇹🇭': '泰国',
+  '🇻🇳': '越南', '🇵🇭': '菲律宾', '🇮🇹': '意大利', '🇪🇸': '西班牙',
+  '🇳🇴': '挪威', '🇩🇰': '丹麦', '🇫🇮': '芬兰', '🇧🇪': '比利时',
+  '🇵🇱': '波兰', '🇨🇿': '捷克', '🇷🇴': '罗马尼亚', '🇿🇦': '南非',
+  '🇲🇴': '澳门',
+};
+
+// 关键字 → 中文国名
+const KEYWORD_TO_COUNTRY = {
+  'hong kong': '香港', 'usa': '美国', 'japan': '日本', 'netherlands': '荷兰',
+  'russia': '俄罗斯', 'germany': '德国', 'switzerland': '瑞士', 'france': '法国',
+  'united kingdom': '英国', 'sweden': '瑞典', 'bulgaria': '保加利亚', 'austria': '奥地利',
+  'ireland': '爱尔兰', 'turkey': '土耳其', 'hungary': '匈牙利', 'korea': '韩国',
+  'taiwan': '台湾', 'canada': '加拿大', 'australia': '澳大利亚',
+  'united arab emirates': '阿联酋', 'india': '印度', 'indonesia': '印尼',
+  'brazil': '巴西', 'argentina': '阿根廷', 'chile': '智利', 'singapore': '新加坡',
+  'malaysia': '马来西亚', 'thailand': '泰国', 'vietnam': '越南',
+  'philippines': '菲律宾', 'italy': '意大利', 'spain': '西班牙',
+  'norway': '挪威', 'denmark': '丹麦', 'finland': '芬兰', 'belgium': '比利时',
+  'poland': '波兰', 'seattle': '美国', 'los angeles': '美国', 'san jose': '美国',
+  'sydney': '澳大利亚', 'moscow': '俄罗斯', 'st. petersburg': '俄罗斯',
+  'london': '英国', 'amsterdam': '荷兰', 'frankfurt': '德国',
+};
+
+/** 从节点名称提取国家（YAML 节点通常有国旗和地区名） */
+function extractCountryFromName(name) {
+  // 1. 检查旗帜 emoji
+  for (const [flag, cn] of Object.entries(FLAG_TO_COUNTRY)) {
+    if (name.includes(flag)) return cn;
+  }
+  // 2. 检查关键字
+  const lower = name.toLowerCase();
+  for (const [kw, cn] of Object.entries(KEYWORD_TO_COUNTRY)) {
+    if (lower.includes(kw)) return cn;
+  }
+  return null;
+}
 
 /** 查询节点服务器的归属国家（带缓存） */
 async function lookupCountry(server) {
@@ -399,33 +439,6 @@ async function lookupCountry(server) {
     return '未知';
   }
 }
-
-/**
- * 为一批代理节点检测国家并重命名
- * 格式: 订阅名-国家-原节点名
- */
-async function tagProxiesWithCountry(proxies, subName) {
-  const el = document.getElementById('subFetchStatus');
-  // 收集所有唯一的 server
-  const uniqueServers = [...new Set(proxies.map(p => p.server))];
-
-  // 逐个查询（ip-api 免费版不支持批量域名查询）
-  for (let i = 0; i < uniqueServers.length; i++) {
-    el.innerHTML = `<span class="toast toast-info">${subName} 正在检测节点国家 [${i + 1}/${uniqueServers.length}]...</span>`;
-    await lookupCountry(uniqueServers[i]);
-    // 控制请求频率（免费版限制 45/min）
-    if (i < uniqueServers.length - 1) {
-      await new Promise(r => setTimeout(r, 200));
-    }
-  }
-
-  // 重命名
-  for (const p of proxies) {
-    const country = countryCache[p.server] || '未知';
-    p.name = `${subName}-${country}-${p.name}`;
-  }
-}
-
 // ======================== 订阅行管理 ========================
 
 let subRowCounter = 0;
@@ -507,9 +520,12 @@ async function fetchSubscription() {
         continue;
       }
 
-      // 检测国家并重命名
-      el.innerHTML = `<span class="toast toast-info">${label} ${sub.name} 正在检测国家...</span>`;
-      await tagProxiesWithCountry(proxies, sub.name);
+      // 标记来源，暂不查国家（统一查）
+      for (const p of proxies) {
+        p._source = sub.name;
+        p._origName = p.name;
+        p._checked = false;
+      }
 
       allNewProxies = allNewProxies.concat(proxies);
       successCount++;
@@ -525,37 +541,95 @@ async function fetchSubscription() {
     return;
   }
 
-  // 合并去重（以新的格式化名称为准）
-  const existingNames = new Set(parsedProxies.map(p => p.name));
-  const uniqueNew = allNewProxies.filter(p => {
-    if (!p.name) return false;
-    if (existingNames.has(p.name)) return false;
-    existingNames.add(p.name);
-    return true;
-  });
-
-  parsedProxies = parsedProxies.concat(uniqueNew);
+  // 合并
+  mergeProxies(allNewProxies);
   renderProxyPreview();
   updateProxySelects();
 
-  let msg = `完成！${successCount} 个成功`;
-  if (failCount > 0) msg += `，${failCount} 个失败`;
-  msg += `，共 ${uniqueNew.length} 个节点`;
+  const unchecked = parsedProxies.filter(p => p._source && !p._checked).length;
+  let msg = `${successCount} 个订阅抓取完成，共 ${parsedProxies.length} 个节点`;
+  if (unchecked > 0) msg += `，${unchecked} 个待查国家`;
   const type = failCount > 0 ? 'warning' : 'success';
   el.innerHTML = `<span class="toast toast-${type}">${msg}</span>`;
-  setTimeout(() => { el.innerHTML = ''; }, 6000);
+  setTimeout(() => { el.innerHTML = ''; }, 5000);
+}
+
+/** 合并代理列表（按 server+port 去重） */
+function mergeProxies(newProxies) {
+  const seen = new Set(parsedProxies.map(p => `${p.server}:${p.port}`));
+  const unique = newProxies.filter(p => {
+    const key = `${p.server}:${p.port}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  parsedProxies = [...parsedProxies, ...unique];
+}
+
+/** 对已导入但未查国家的节点统一检测国家并重命名 */
+async function detectAndRenameAll() {
+  const unchecked = parsedProxies.filter(p => p._source && !p._checked);
+  if (unchecked.length === 0) {
+    showToast('subFetchStatus', '所有节点已检测过国家', 'info');
+    return;
+  }
+
+  const btn = document.getElementById('btnDetectCountry');
+  btn.disabled = true;
+  btn.textContent = '检测中...';
+
+  const el = document.getElementById('subFetchStatus');
+  el.innerHTML = `<span class="toast toast-info">正在检测 ${unchecked.length} 个节点国家...</span>`;
+
+  // 收集唯一 server
+  const servers = [...new Set(unchecked.map(p => p.server))];
+  for (let i = 0; i < servers.length; i++) {
+    el.innerHTML = `<span class="toast toast-info">检测国家 [${i + 1}/${servers.length}]...</span>`;
+    await lookupCountry(servers[i]);
+    if (i < servers.length - 1) await new Promise(r => setTimeout(r, 200));
+  }
+
+  // 重命名：基于 _origName（原始名称），避免重复叠加
+  for (const p of unchecked) {
+    const country = countryCache[p.server] || '未知';
+    const baseName = p._origName || p.name;
+    p.name = `${p._source}-${country}-${baseName}`;
+    p._origName = baseName;  // 保存基准名，后续点击不会叠加
+    p._checked = true;
+  }
+
+  renderProxyPreview();
+  updateProxySelects();
+  el.innerHTML = `<span class="toast toast-success">完成！已为 ${unchecked.length} 个节点标注国家</span>`;
+  setTimeout(() => { el.innerHTML = ''; }, 4000);
+
+  btn.disabled = false;
+  btn.textContent = '检测国家并重命名';
 }
 
 /** 渲染节点预览标签 */
 function renderProxyPreview() {
   const container = document.getElementById('proxyPreview');
+  const counter = document.getElementById('proxyCount');
   if (parsedProxies.length === 0) {
     container.innerHTML = '';
+    counter.textContent = '未导入节点';
     return;
   }
-  container.innerHTML = parsedProxies.map(p =>
-    `<span class="proxy-badge"><span class="type">${p.type.toUpperCase()}</span> ${escapeHtml(p.name)}</span>`
-  ).join('');
+  const unchecked = parsedProxies.filter(p => p._source && !p._checked).length;
+  let status = `共 ${parsedProxies.length} 个节点`;
+  if (unchecked > 0) status += `（${unchecked} 个待查国家）`;
+  counter.textContent = status;
+  // 只显示前 30 个
+  const show = parsedProxies.slice(0, 30);
+  let html = show.map(p => {
+    const tag = p._source && !p._checked ? ' ⏳' : '';
+    return `<span class="proxy-badge"><span class="type">${p.type.toUpperCase()}</span> ${escapeHtml(p.name)}${tag}</span>`;
+  }).join('');
+  if (parsedProxies.length > 30) {
+    html += `<span class="proxy-badge">... 还有 ${parsedProxies.length - 30} 个</span>`;
+  }
+  container.innerHTML = html;
 }
 
 /** 更新下拉选择框 */
@@ -587,6 +661,7 @@ function generateConfig() {
   const yamlText = document.getElementById('yamlInput').value.trim();
   let config = {};
 
+  // Step 1: 解析基础 YAML（如果有，保留所有原有字段）
   if (yamlText) {
     try {
       config = jsyaml.load(yamlText) || {};
@@ -604,7 +679,82 @@ function generateConfig() {
     showToast('genStatus', '请先解析节点链接或抓取订阅', 'warning');
     return;
   }
-  config.proxies = parsedProxies;
+
+  // Step 2: 替换代理列表（清理内部字段 _source, _checked）
+  config.proxies = parsedProxies.map(p => {
+    const { _source, _checked, _origName, ...clean } = p;
+    return clean;
+  });
+
+  // 模式 B — 多出口监听器（先处理，因为端口号要写进节点名）
+  const enableListeners = document.getElementById('enableListeners').checked;
+
+  if (enableListeners) {
+    const lType = document.getElementById('listenerType').value;
+    const startPort = parseInt(document.getElementById('startPort').value) || 8000;
+    const lAddr = document.getElementById('listenAddr').value || '127.0.0.1';
+
+    // 将监听端口号插入节点名：来源-国家-原名 → 来源-国家-端口-原名
+    config.proxies = config.proxies.map((p, i) => {
+      const parts = p.name.split('-');
+      if (parts.length >= 2) {
+        const source = parts[0];
+        const country = parts[1];
+        const rest = parts.slice(2).join('-');
+        const port = startPort + i;
+        return { ...p, name: `${source}-${country}-${port}-${rest}` };
+      }
+      return p;
+    });
+
+    config.listeners = config.proxies.map((p, i) => ({
+      name: `${p.type}-${p.name}`,
+      type: lType,
+      address: lAddr,
+      port: startPort + i,
+      proxy: p.name,
+    }));
+
+    // 仅在原配置没有 dns 时补充默认 dns 配置
+    if (!config.dns) {
+      config.dns = {
+        enable: true,
+        'enhanced-mode': 'fake-ip',
+        'fake-ip-range': '198.18.0.1/16',
+        'default-nameserver': [
+          '114.114.114.114',
+          '223.5.5.5',
+        ],
+        'fake-ip-filter': [
+          '*.lan',
+          'localhost.ptlogin2.qq.com',
+        ],
+        nameserver: [
+          'https://doh.pub/dns-query',
+          'https://dns.alidns.com/dns-query',
+        ],
+        fallback: [
+          'https://cloudflare-dns.com/dns-query',
+          'https://dns.google/dns-query',
+        ],
+        'fallback-filter': {
+          geoip: true,
+          geoip_code: 'CN',
+        },
+      };
+    }
+  }
+
+  // 更新 proxy-groups，保持原有组名
+  const proxyNames = config.proxies.map(p => p.name);
+  if (config['proxy-groups'] && config['proxy-groups'].length > 0) {
+    for (const g of config['proxy-groups']) {
+      g.proxies = proxyNames;
+    }
+  } else {
+    config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
+    config.rules = ['MATCH,Proxy'];
+  }
 
   // 模式 A — 链式代理
   const relayName = document.getElementById('relayProxy').value;
@@ -623,64 +773,6 @@ function generateConfig() {
     });
     showToast('genStatus', `链式代理已设置: ${exitName} → ${relayName}`, 'success');
   }
-
-  // 模式 B — 多出口监听器
-  const enableListeners = document.getElementById('enableListeners').checked;
-
-  if (enableListeners) {
-    const lType = document.getElementById('listenerType').value;
-    const startPort = parseInt(document.getElementById('startPort').value) || 8000;
-    const lAddr = document.getElementById('listenAddr').value || '127.0.0.1';
-
-    config.listeners = config.proxies.map((p, i) => ({
-      name: `${p.type}-${p.name}`,
-      type: lType,
-      address: lAddr,
-      port: startPort + i,
-      proxy: p.name,
-    }));
-
-    config.dns = {
-      enable: true,
-      'enhanced-mode': 'fake-ip',
-      'fake-ip-range': '198.18.0.1/16',
-      'default-nameserver': [
-        '114.114.114.114',
-        '223.5.5.5',
-      ],
-      'fake-ip-filter': [
-        '*.lan',
-        'localhost.ptlogin2.qq.com',
-      ],
-      nameserver: [
-        'https://doh.pub/dns-query',
-        'https://dns.alidns.com/dns-query',
-      ],
-      fallback: [
-        'https://cloudflare-dns.com/dns-query',
-        'https://dns.google/dns-query',
-      ],
-      'fallback-filter': {
-        geoip: true,
-        geoip_code: 'CN',
-      },
-    };
-  }
-
-  // proxy-groups — Clash 必需的路由选择组
-  const proxyNames = config.proxies.map(p => p.name);
-  config['proxy-groups'] = [
-    {
-      name: 'Proxy',
-      type: 'select',
-      proxies: proxyNames,
-    },
-  ];
-
-  // rules — Clash 必需的流量匹配规则
-  config.rules = [
-    'MATCH,Proxy',
-  ];
 
   // 输出 YAML（noCompatMode: false 保持 YAML 1.1 兼容，Go 解析器需要）
   try {
@@ -761,11 +853,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnGenerate').addEventListener('click', generateConfig);
   document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
   document.getElementById('btnDownload').addEventListener('click', saveToFile);
+  document.getElementById('btnDetectCountry').addEventListener('click', detectAndRenameAll);
+  document.getElementById('btnClearProxies').addEventListener('click', () => {
+    parsedProxies = [];
+    baseConfig = null;
+    renderProxyPreview();
+    updateProxySelects();
+    document.getElementById('outputYaml').value = '';
+    showToast('linkStatus', '已清除所有节点', 'info');
+  });
 
   // 监听器开关
   document.getElementById('enableListeners').addEventListener('change', toggleListenerSettings);
 
-  // YAML 输入变化时自动解析
+  // YAML 输入变化时自动解析（保留原有代理名称，不做国家重命名）
   document.getElementById('yamlInput').addEventListener('change', () => {
     const yamlText = document.getElementById('yamlInput').value.trim();
     if (!yamlText) { baseConfig = null; return; }
@@ -780,10 +881,24 @@ document.addEventListener('DOMContentLoaded', () => {
           return true;
         });
         if (fromYaml.length > 0) {
-          parsedProxies = [...parsedProxies, ...fromYaml];
+          // YAML 节点从原名提取国家（国旗/地区名），不查 GeoIP（服务器物理位置不准确）
+          const importName = document.getElementById('manualImportName').value.trim() || 'YAML';
+          for (const p of fromYaml) {
+            const detected = extractCountryFromName(p.name);
+            p._source = importName;
+            p._origName = p.name;
+            if (detected) {
+              p.name = `${importName}-${detected}-${p.name}`;
+              p._checked = true;
+            } else {
+              p._checked = false;
+            }
+          }
+          mergeProxies(fromYaml);
           renderProxyPreview();
           updateProxySelects();
-          showToast('linkStatus', `从 YAML 中读取到 ${fromYaml.length} 个节点（总计 ${parsedProxies.length} 个）`, 'info');
+          const detected = fromYaml.filter(p => p._checked).length;
+          showToast('linkStatus', `从 YAML 中读取 ${fromYaml.length} 个节点（${detected} 个识别出国家，${fromYaml.length - detected} 个待查）`, 'success');
         }
       }
     } catch {
@@ -792,13 +907,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 恢复已保存的订阅列表（持久化）
-  chrome.storage.local.get('subList', (result) => {
+  chrome.storage.local.get(['subList', 'linkInput', 'yamlInput', 'importName'], (result) => {
     const subs = result.subList;
     if (subs && subs.length > 0) {
       subs.forEach(s => addSubRow(s.name, s.url));
     } else {
-      // 首次使用，预置一行空白
       addSubRow('', '');
     }
+    if (result.linkInput) document.getElementById('linkInput').value = result.linkInput;
+    if (result.yamlInput) document.getElementById('yamlInput').value = result.yamlInput;
+    if (result.importName) document.getElementById('manualImportName').value = result.importName;
   });
+
+  // 自动保存：手动粘贴链接、YAML 配置、导入名称
+  const autoSaveInputs = () => {
+    chrome.storage.local.set({
+      linkInput: document.getElementById('linkInput').value,
+      yamlInput: document.getElementById('yamlInput').value,
+      importName: document.getElementById('manualImportName').value,
+    });
+  };
+  document.getElementById('linkInput').addEventListener('input', autoSaveInputs);
+  document.getElementById('yamlInput').addEventListener('input', autoSaveInputs);
+  document.getElementById('manualImportName').addEventListener('input', autoSaveInputs);
 });
