@@ -187,6 +187,7 @@ function parseVless(uri) {
     if (sec === 'reality') {
       p.tls = true;
       p.reality_opts = { public_key: params.get('pbk') || '', short_id: params.get('sid') || '' };
+      if (params.get('spx')) p.reality_opts.spider_x = params.get('spx');
       if (params.get('sni')) p.servername = params.get('sni');
       if (params.get('fp')) p.client_fingerprint = params.get('fp');
       if (params.get('flow')) p.flow = params.get('flow');
@@ -533,6 +534,20 @@ async function fetchOneSub(url) {
   return proxies;
 }
 
+// 将对象的所有 key 从下划线格式转为连字符格式（Clash Meta 要求连字符）
+function normalizeKeys(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(normalizeKeys);
+  if (typeof obj !== 'object') return obj;
+  var result = {};
+  for (var k in obj) {
+    if (!obj.hasOwnProperty(k)) continue;
+    var newKey = k.replace(/_/g, '-');
+    result[newKey] = normalizeKeys(obj[k]);
+  }
+  return result;
+}
+
 async function doGenerate() {
   var subs = getAllSubs();
   if (subs.length === 0) { toast('请至少添加一个订阅链接', 'warning'); return; }
@@ -649,6 +664,8 @@ async function doGenerate() {
     'fallback-filter': { geoip: true, geoip_code: 'CN' },
   };
 
+  // 将下划线 key 转为连字符（Clash Meta 标准格式）
+  config = normalizeKeys(config);
   var yaml = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
 
   // Step 5: 生成订阅链接
