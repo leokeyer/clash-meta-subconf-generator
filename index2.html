@@ -18,28 +18,34 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh;
   }
-  .container { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+  .container { max-width: 800px; margin: 0 auto; padding: 24px 20px 60px; }
 
   .header { text-align: center; padding: 36px 0 28px; }
-  .header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.02em; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
   .header p { color: var(--text-secondary); margin-top: 6px; font-size: .925rem; }
 
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px;
   }
-
-  label { display: block; font-size: .875rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-  input[type="text"] {
-    width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
-    font-size: .875rem; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-    background: var(--bg); color: var(--text); transition: border-color .15s;
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--primary); color: #fff; font-size: .8rem; font-weight: 700;
   }
-  input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+
+  label { display: block; font-size: .85rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; }
+  textarea, input[type="text"] {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: .85rem; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    background: var(--bg); color: var(--text); transition: border-color .15s; resize: vertical;
+  }
+  textarea:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
 
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 18px; border: none; border-radius: 8px;
+    padding: 10px 20px; border: none; border-radius: 8px;
     font-size: .875rem; font-weight: 500; cursor: pointer; transition: all .15s;
   }
   .btn-primary { background: var(--primary); color: #fff; }
@@ -50,9 +56,8 @@
   .btn-sm { padding: 6px 12px; font-size: .8rem; }
 
   .toast {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: 8px; font-size: .825rem; font-weight: 500;
-    animation: fadeIn .25s ease;
+    display: inline-block; padding: 8px 14px; border-radius: 8px; font-size: .825rem; font-weight: 500;
+    animation: fadeIn .25s ease; margin-top: 8px;
   }
   .toast-success { background: #ecfdf5; color: #065f46; }
   .toast-info { background: #eff6ff; color: #1e40af; }
@@ -75,10 +80,10 @@
 
   .result-box {
     background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius);
-    padding: 20px; margin-top: 16px;
+    padding: 20px;
   }
-  .result-box label { color: #166534; margin-bottom: 8px; }
-  .result-box .link-row { display: flex; gap: 8px; }
+  .result-box label { color: #166534; }
+  .result-box .link-row { display: flex; gap: 8px; margin-top: 6px; }
   .result-box input {
     flex: 1; font-family: monospace; font-size: .8rem;
     padding: 10px 14px; border: 1px solid #86efac; border-radius: 8px; background: #fff;
@@ -102,34 +107,41 @@
 <div class="container">
   <div class="header">
     <h1>Clash Meta 多订阅配置生成器</h1>
-    <p>添加多个订阅链接，一键生成可直接导入 Clash 的订阅链接</p>
+    <p>添加多个订阅链接 + 粘贴现有配置 → 一键生成完整配置和订阅链接</p>
   </div>
 
-  <!-- 订阅链接输入 -->
+  <!-- ===== 第一步：订阅链接 ===== -->
   <div class="card">
-    <label>订阅链接（可添加多个，数据自动保存到本地）</label>
+    <h2><span class="num">1</span> 订阅链接</h2>
     <div id="subList"></div>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button class="btn btn-outline btn-sm" id="btnAddSub">+ 添加订阅</button>
     </div>
   </div>
 
-  <!-- 生成按钮 -->
-  <div class="card" style="text-align:center;">
-    <button class="btn btn-primary" id="btnGenerate" style="font-size:1rem;padding:12px 36px;">生成订阅链接</button>
-    <div id="genStatus" style="margin-top:10px;"></div>
+  <!-- ===== 第二步：现有配置 ===== -->
+  <div class="card">
+    <h2><span class="num">2</span> 现有 Clash Meta 配置（粘贴你当前的完整配置，其中的 proxies 将被替换）</h2>
+    <textarea id="baseYaml" placeholder="port: 7890&#10;socks-port: 7891&#10;allow-lan: true&#10;mode: Rule&#10;...&#10;proxies:&#10;  - name: xxx&#10;    ...&#10;proxy-groups:&#10;  - ...&#10;rules:&#10;  - ..." style="min-height:200px;"></textarea>
   </div>
 
-  <!-- 结果：订阅链接 -->
+  <!-- ===== 生成按钮 ===== -->
+  <div class="card" style="text-align:center;">
+    <button class="btn btn-primary" id="btnGenerate" style="font-size:1rem;padding:12px 36px;">生成配置和订阅链接</button>
+    <div id="genStatus"></div>
+  </div>
+
+  <!-- ===== 结果 ===== -->
   <div class="result-box" id="resultArea" style="display:none;">
-    <label>订阅链接（将此 URL 填入 Clash 客户端的订阅地址即可直接导入配置）</label>
+    <label>订阅链接（将此 URL 填入 Clash 客户端订阅地址即可直接导入完整配置）</label>
     <div class="link-row">
       <input type="text" id="subLinkInput" readonly>
       <button class="btn btn-primary btn-sm" id="btnCopyLink" style="flex-shrink:0;">复制链接</button>
     </div>
     <p class="hint">
-      配置已生成：监听器类型 <code>mixed</code>，端口 <code>8000</code> 起递增，地址 <code>127.0.0.1</code>，含 DNS fake-ip 配置。
-      部署到 Vercel 后链接即可使用。
+      已合并原配置的所有字段（sniffer、dns、proxy-groups、rules 等），仅替换 proxies 并新增 listeners。
+      监听器类型 <code>mixed</code>，端口 <code>8000</code> 起递增，地址 <code>127.0.0.1</code>。
+      部署到 Vercel 后链接可用。
     </p>
   </div>
 </div>
@@ -139,28 +151,18 @@
 
 function parseVmess(uri) {
   try {
-    const b64 = uri.replace('vmess://', '');
-    const json = JSON.parse(atob(b64));
-    const p = {
-      name: json.ps || 'VMess 节点', type: 'vmess',
-      server: json.add, port: parseInt(json.port) || 443,
-      uuid: json.id, alterId: parseInt(json.aid) || 0,
-      cipher: json.scy || 'auto', udp: true,
-    };
+    var b64 = uri.replace('vmess://', '');
+    var json = JSON.parse(atob(b64));
+    var p = { name: json.ps || 'VMess 节点', type: 'vmess', server: json.add, port: parseInt(json.port) || 443, uuid: json.id, alterId: parseInt(json.aid) || 0, cipher: json.scy || 'auto', udp: true };
     if (json.net) p.network = json.net;
-    if (json.net === 'ws') {
-      p.ws_opts = { path: json.path || '/', headers: {} };
-      if (json.host) p.ws_opts.headers.Host = json.host;
-    } else if (json.net === 'grpc') {
-      p.grpc_opts = { grpc_service_name: json.path || '' };
-    } else if (json.net === 'h2') {
-      p.h2_opts = { host: [json.host] || [], path: json.path || '' };
-    }
+    if (json.net === 'ws') { p['ws-opts'] = { path: json.path || '/', headers: {} }; if (json.host) p['ws-opts'].headers.Host = json.host; }
+    else if (json.net === 'grpc') { p['grpc-opts'] = { 'grpc-service-name': json.path || '' }; }
+    else if (json.net === 'h2') { p['h2-opts'] = { host: [json.host] || [], path: json.path || '' }; }
     if (json.tls === 'tls') {
       p.tls = true;
       if (json.sni) p.servername = json.sni;
       if (json.alpn) p.alpn = json.alpn.split(',').map(function(s) { return s.trim(); });
-      if (json.fp) p.client_fingerprint = json.fp;
+      if (json.fp) p['client-fingerprint'] = json.fp;
     }
     return p;
   } catch (e) { return null; }
@@ -168,33 +170,25 @@ function parseVmess(uri) {
 
 function parseVless(uri) {
   try {
-    const url = new URL(uri);
-    const p = {
-      name: decodeURIComponent(url.hash?.slice(1) || 'VLESS 节点'), type: 'vless',
-      server: url.hostname, port: parseInt(url.port) || 443,
-      uuid: url.username, udp: true,
-    };
-    const params = url.searchParams;
+    var url = new URL(uri);
+    var p = { name: decodeURIComponent(url.hash ? url.hash.slice(1) : 'VLESS 节点'), type: 'vless', server: url.hostname, port: parseInt(url.port) || 443, uuid: url.username, udp: true };
+    var params = url.searchParams;
     p.cipher = params.get('encryption') || 'none';
     p.network = params.get('type') || 'tcp';
-    if (p.network === 'ws') {
-      p.ws_opts = { path: params.get('path') || '/', headers: {} };
-      if (params.get('host')) p.ws_opts.headers.Host = params.get('host');
-    } else if (p.network === 'grpc') {
-      p.grpc_opts = { grpc_service_name: params.get('serviceName') || '' };
-    }
+    if (p.network === 'ws') { p['ws-opts'] = { path: params.get('path') || '/', headers: {} }; if (params.get('host')) p['ws-opts'].headers.Host = params.get('host'); }
+    else if (p.network === 'grpc') { p['grpc-opts'] = { 'grpc-service-name': params.get('serviceName') || '' }; }
     var sec = params.get('security') || 'none';
     if (sec === 'reality') {
       p.tls = true;
-      p.reality_opts = { public_key: params.get('pbk') || '', short_id: params.get('sid') || '' };
-      if (params.get('spx')) p.reality_opts.spider_x = params.get('spx');
+      p['reality-opts'] = { 'public-key': params.get('pbk') || '', 'short-id': params.get('sid') || '' };
+      if (params.get('spx')) p['reality-opts']['spider-x'] = params.get('spx');
       if (params.get('sni')) p.servername = params.get('sni');
-      if (params.get('fp')) p.client_fingerprint = params.get('fp');
+      if (params.get('fp')) p['client-fingerprint'] = params.get('fp');
       if (params.get('flow')) p.flow = params.get('flow');
     } else if (sec === 'tls') {
       p.tls = true;
       if (params.get('sni')) p.servername = params.get('sni');
-      if (params.get('fp')) p.client_fingerprint = params.get('fp');
+      if (params.get('fp')) p['client-fingerprint'] = params.get('fp');
       if (params.get('alpn')) p.alpn = params.get('alpn').split(',').map(function(s) { return s.trim(); });
       if (params.get('flow')) p.flow = params.get('flow');
     }
@@ -204,24 +198,16 @@ function parseVless(uri) {
 
 function parseTrojan(uri) {
   try {
-    const url = new URL(uri);
-    const p = {
-      name: decodeURIComponent(url.hash?.slice(1) || 'Trojan 节点'), type: 'trojan',
-      server: url.hostname, port: parseInt(url.port) || 443,
-      password: url.username, udp: true,
-    };
+    var url = new URL(uri);
+    var p = { name: decodeURIComponent(url.hash ? url.hash.slice(1) : 'Trojan 节点'), type: 'trojan', server: url.hostname, port: parseInt(url.port) || 443, password: url.username, udp: true };
     var params = url.searchParams;
     p.network = params.get('type') || 'tcp';
-    if (p.network === 'ws') {
-      p.ws_opts = { path: params.get('path') || '/', headers: {} };
-      if (params.get('host')) p.ws_opts.headers.Host = params.get('host');
-    } else if (p.network === 'grpc') {
-      p.grpc_opts = { grpc_service_name: params.get('serviceName') || '' };
-    }
+    if (p.network === 'ws') { p['ws-opts'] = { path: params.get('path') || '/', headers: {} }; if (params.get('host')) p['ws-opts'].headers.Host = params.get('host'); }
+    else if (p.network === 'grpc') { p['grpc-opts'] = { 'grpc-service-name': params.get('serviceName') || '' }; }
     if ((params.get('security') || 'tls') === 'tls') {
       p.tls = true;
       if (params.get('sni')) p.servername = params.get('sni');
-      if (params.get('fp')) p.client_fingerprint = params.get('fp');
+      if (params.get('fp')) p['client-fingerprint'] = params.get('fp');
       if (params.get('alpn')) p.alpn = params.get('alpn').split(',').map(function(s) { return s.trim(); });
     }
     return p;
@@ -235,18 +221,14 @@ function parseSS(uri) {
     var rest = withoutHash.replace('ss://', '');
     var method, password, server, port;
     if (rest.includes('@')) {
-      var parts = rest.split('@');
-      var d = atob(parts[0]);
-      var ci = d.indexOf(':');
+      var parts = rest.split('@'), d = atob(parts[0]), ci = d.indexOf(':');
       method = d.slice(0, ci); password = d.slice(ci + 1);
       var lc = parts[1].lastIndexOf(':');
       server = parts[1].slice(0, lc);
       if (server.startsWith('[') && server.endsWith(']')) server = server.slice(1, -1);
       port = parseInt(parts[1].slice(lc + 1)) || 8388;
     } else {
-      var d = atob(rest);
-      var credAddr = d.split('@');
-      var ci = credAddr[0].indexOf(':');
+      var d = atob(rest), credAddr = d.split('@'), ci = credAddr[0].indexOf(':');
       method = credAddr[0].slice(0, ci); password = credAddr[0].slice(ci + 1);
       var lc = credAddr[1].lastIndexOf(':');
       server = credAddr[1].slice(0, lc);
@@ -259,20 +241,16 @@ function parseSS(uri) {
 
 function parseHysteria2(uri) {
   try {
-    var url = new URL(uri);
-    var params = url.searchParams;
+    var url = new URL(uri), params = url.searchParams;
     var p = {
-      name: decodeURIComponent(url.hash?.slice(1) || 'Hysteria2 节点'), type: 'hysteria2',
+      name: decodeURIComponent(url.hash ? url.hash.slice(1) : 'Hysteria2 节点'), type: 'hysteria2',
       server: url.hostname, port: parseInt(url.port) || 443,
       password: url.username || params.get('auth') || '', udp: true,
     };
     if (params.get('sni')) p.sni = params.get('sni');
-    if (params.get('insecure') === '1' || params.get('insecure') === 'true') p.skip_cert_verify = true;
+    if (params.get('insecure') === '1' || params.get('insecure') === 'true') p['skip-cert-verify'] = true;
     if (params.get('mport')) p.ports = params.get('mport');
-    if (params.get('obfs')) {
-      p.obfs = { type: params.get('obfs') };
-      if (params.get('obfs-password')) p.obfs.password = params.get('obfs-password');
-    }
+    if (params.get('obfs')) { p.obfs = { type: params.get('obfs') }; if (params.get('obfs-password')) p.obfs.password = params.get('obfs-password'); }
     if (params.get('alpn')) p.alpn = params.get('alpn').split(',').map(function(s) { return s.trim(); });
     return p;
   } catch (e) { return null; }
@@ -280,20 +258,19 @@ function parseHysteria2(uri) {
 
 function parseTuic(uri) {
   try {
-    var url = new URL(uri);
-    var params = url.searchParams;
+    var url = new URL(uri), params = url.searchParams;
     var p = {
-      name: decodeURIComponent(url.hash?.slice(1) || 'TUIC 节点'), type: 'tuic',
+      name: decodeURIComponent(url.hash ? url.hash.slice(1) : 'TUIC 节点'), type: 'tuic',
       server: url.hostname, port: parseInt(url.port) || 443,
       uuid: url.username, password: url.password || '', udp: true,
     };
-    if (params.get('congestion_control')) p.congestion_controller = params.get('congestion_control');
+    if (params.get('congestion_control')) p['congestion-controller'] = params.get('congestion_control');
     if (params.get('alpn')) p.alpn = params.get('alpn').split(',').map(function(s) { return s.trim(); });
     if (params.get('sni')) p.sni = params.get('sni');
-    if (params.get('allow_insecure') === '1' || params.get('allow_insecure') === 'true') p.skip_cert_verify = true;
-    if (params.get('disable_sni') === '1' || params.get('disable_sni') === 'true') p.disable_sni = true;
-    if (params.get('reduce_rtt') === '1' || params.get('reduce_rtt') === 'true') p.reduce_rtt = true;
-    if (params.get('udp_relay_mode')) p.udp_relay_mode = params.get('udp_relay_mode');
+    if (params.get('allow_insecure') === '1' || params.get('allow_insecure') === 'true') p['skip-cert-verify'] = true;
+    if (params.get('disable_sni') === '1' || params.get('disable_sni') === 'true') p['disable-sni'] = true;
+    if (params.get('reduce_rtt') === '1' || params.get('reduce_rtt') === 'true') p['reduce-rtt'] = true;
+    if (params.get('udp_relay_mode')) p['udp-relay-mode'] = params.get('udp_relay_mode');
     return p;
   } catch (e) { return null; }
 }
@@ -310,7 +287,7 @@ function parseLink(link) {
   return null;
 }
 
-// ======================== 国家检测（默认执行） ========================
+// ======================== 国家检测 ========================
 
 var countryCache = {};
 
@@ -325,8 +302,7 @@ var COUNTRY_MAP = {
   'Macau': '澳门','Finland': '芬兰','Poland': '波兰','Luxembourg': '卢森堡',
   'Belgium': '比利时','Austria': '奥地利','Norway': '挪威','Denmark': '丹麦',
   'Ireland': '爱尔兰','Portugal': '葡萄牙','Czech Republic': '捷克','Romania': '罗马尼亚',
-  'Argentina': '阿根廷','Chile': '智利','Mexico': '墨西哥','Colombia': '哥伦比亚',
-  'New Zealand': '新西兰',
+  'Argentina': '阿根廷','Chile': '智利','Mexico': '墨西哥','Colombia': '哥伦比亚','New Zealand': '新西兰',
 };
 
 var FLAG_TO_COUNTRY = {
@@ -354,13 +330,9 @@ var KEYWORD_TO_COUNTRY = {
 };
 
 function extractCountryFromName(name) {
-  for (var flag in FLAG_TO_COUNTRY) {
-    if (name.includes(flag)) return FLAG_TO_COUNTRY[flag];
-  }
+  for (var flag in FLAG_TO_COUNTRY) { if (name.indexOf(flag) !== -1) return FLAG_TO_COUNTRY[flag]; }
   var lower = name.toLowerCase();
-  for (var kw in KEYWORD_TO_COUNTRY) {
-    if (lower.includes(kw)) return KEYWORD_TO_COUNTRY[kw];
-  }
+  for (var kw in KEYWORD_TO_COUNTRY) { if (lower.indexOf(kw) !== -1) return KEYWORD_TO_COUNTRY[kw]; }
   return null;
 }
 
@@ -371,52 +343,36 @@ async function lookupCountry(server) {
     var proxyBase = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/proxy?url=';
     var useProxy = location.protocol !== 'file:';
     var resp;
-    if (useProxy) {
-      resp = await fetch(proxyBase + encodeURIComponent(ipApiUrl));
-    } else {
-      resp = await fetch(ipApiUrl);
-    }
+    if (useProxy) { resp = await fetch(proxyBase + encodeURIComponent(ipApiUrl)); }
+    else { resp = await fetch(ipApiUrl); }
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     var cn = COUNTRY_MAP[data.country] || data.country || '未知';
     countryCache[server] = cn;
     return cn;
-  } catch (e) {
-    console.warn('GeoIP 查询失败:', server, e.message);
-    countryCache[server] = '未知';
-    return '未知';
-  }
+  } catch (e) { countryCache[server] = '未知'; return '未知'; }
 }
 
 async function detectCountries(proxies) {
-  // 先尝试从名称提取
   var needLookup = [];
   for (var i = 0; i < proxies.length; i++) {
-    var p = proxies[i];
-    var cn = extractCountryFromName(p._origName || p.name);
-    if (cn) {
-      p._country = cn;
-      p._checked = true;
-    } else {
-      needLookup.push(p);
-    }
+    var cn = extractCountryFromName(proxies[i]._origName || proxies[i].name);
+    if (cn) { proxies[i]._country = cn; proxies[i]._checked = true; }
+    else { needLookup.push(proxies[i]); }
   }
-  // 剩余查 GeoIP
-  if (needLookup.length > 0) {
-    var servers = [];
-    var seen = {};
-    for (var i = 0; i < needLookup.length; i++) {
-      var s = needLookup[i].server;
-      if (!seen[s]) { seen[s] = true; servers.push(s); }
-    }
-    for (var i = 0; i < servers.length; i++) {
-      await lookupCountry(servers[i]);
-      if (i < servers.length - 1) await new Promise(function(r) { setTimeout(r, 200); });
-    }
-    for (var i = 0; i < needLookup.length; i++) {
-      needLookup[i]._country = countryCache[needLookup[i].server] || '未知';
-      needLookup[i]._checked = true;
-    }
+  if (needLookup.length === 0) return;
+  var servers = [], seen = {};
+  for (var i = 0; i < needLookup.length; i++) {
+    var s = needLookup[i].server;
+    if (!seen[s]) { seen[s] = true; servers.push(s); }
+  }
+  for (var i = 0; i < servers.length; i++) {
+    await lookupCountry(servers[i]);
+    if (i < servers.length - 1) await new Promise(function(r) { setTimeout(r, 200); });
+  }
+  for (var i = 0; i < needLookup.length; i++) {
+    needLookup[i]._country = countryCache[needLookup[i].server] || '未知';
+    needLookup[i]._checked = true;
   }
 }
 
@@ -429,12 +385,8 @@ function createSubRow(name, url) {
     '<input class="sub-name" type="text" value="' + esc(name) + '" placeholder="订阅名">' +
     '<input class="sub-url" type="text" value="' + esc(url) + '" placeholder="https://...">' +
     '<button class="btn-remove" title="移除">x</button>';
-  row.querySelector('.btn-remove').addEventListener('click', function() {
-    row.remove(); saveSubs();
-  });
-  row.querySelectorAll('input').forEach(function(inp) {
-    inp.addEventListener('input', saveSubs);
-  });
+  row.querySelector('.btn-remove').addEventListener('click', function() { row.remove(); saveSubs(); });
+  row.querySelectorAll('input').forEach(function(inp) { inp.addEventListener('input', saveSubs); });
   return row;
 }
 
@@ -450,24 +402,21 @@ function getAllSubs() {
 }
 
 function saveSubs() {
-  try { localStorage.setItem('cmg3_subList', JSON.stringify(getAllSubs())); } catch (_) {}
+  try { localStorage.setItem('cmg_subList', JSON.stringify(getAllSubs())); } catch (_) {}
 }
 
 function getNextSubNumber() {
   var rows = document.querySelectorAll('#subList .sub-row');
   var max = 0;
   rows.forEach(function(row) {
-    var name = row.querySelector('.sub-name').value.trim();
-    var m = name.match(/^订阅(\d+)$/);
+    var m = row.querySelector('.sub-name').value.trim().match(/^订阅(\d+)$/);
     if (m) { var n = parseInt(m[1]); if (n > max) max = n; }
   });
   return max + 1;
 }
 
 function addSubRow(name, url) {
-  // 如果名称为空，自动编号为 订阅1, 订阅2...
-  var displayName = name || '订阅' + getNextSubNumber();
-  document.getElementById('subList').appendChild(createSubRow(displayName, url || ''));
+  document.getElementById('subList').appendChild(createSubRow(name || '订阅' + getNextSubNumber(), url || ''));
   saveSubs();
 }
 
@@ -477,7 +426,7 @@ function esc(s) {
   return div.innerHTML;
 }
 
-// ======================== 核心：一键生成 ========================
+// ======================== 从文本提取代理 ========================
 
 function extractProxiesFromText(txt) {
   var result = [];
@@ -492,6 +441,8 @@ function extractProxiesFromText(txt) {
   }
   return result;
 }
+
+// ======================== 核心：一键生成 ========================
 
 async function fetchOneSub(url) {
   var rawText;
@@ -514,12 +465,8 @@ async function fetchOneSub(url) {
         var fresp = await fetch(url);
         if (fresp.ok) { rawText = await fresp.text(); }
         else { throw e; }
-      } catch (_e2) {
-        throw new Error('CORS 限制 + 代理不可用');
-      }
-    } else {
-      throw new Error(e.message + '（CORS 限制，请部署到 Vercel）');
-    }
+      } catch (_e2) { throw new Error('CORS 限制 + 代理不可用'); }
+    } else { throw new Error(e.message + '（CORS 限制，请部署到 Vercel）'); }
   }
 
   if (!rawText || rawText.trim().length === 0) throw new Error('返回空内容');
@@ -534,33 +481,24 @@ async function fetchOneSub(url) {
   return proxies;
 }
 
-// 将对象的所有 key 从下划线格式转为连字符格式（Clash Meta 要求连字符）
-function normalizeKeys(obj) {
-  if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map(normalizeKeys);
-  if (typeof obj !== 'object') return obj;
-  var result = {};
-  for (var k in obj) {
-    if (!obj.hasOwnProperty(k)) continue;
-    var newKey = k.replace(/_/g, '-');
-    result[newKey] = normalizeKeys(obj[k]);
-  }
-  return result;
+function showToast(msg, type) {
+  document.getElementById('genStatus').innerHTML = '<span class="toast toast-' + type + '">' + msg + '</span>';
+  setTimeout(function() { document.getElementById('genStatus').innerHTML = ''; }, 5000);
 }
 
 async function doGenerate() {
   var subs = getAllSubs();
-  if (subs.length === 0) { toast('请至少添加一个订阅链接', 'warning'); return; }
+  if (subs.length === 0) { showToast('请至少添加一个订阅链接', 'warning'); return; }
   saveSubs();
 
+  // 保存 baseYaml
+  try { localStorage.setItem('cmg_baseYaml', document.getElementById('baseYaml').value); } catch (_) {}
+
   var btn = document.getElementById('btnGenerate');
-  btn.disabled = true;
-  btn.textContent = '正在抓取订阅...';
+  btn.disabled = true; btn.textContent = '正在抓取订阅...';
 
   // Step 1: 抓取所有订阅
-  var allProxies = [];
-  var ok = 0, fail = 0;
-  var failNames = [];
+  var allProxies = [], ok = 0, fail = 0, failNames = [];
 
   for (var i = 0; i < subs.length; i++) {
     var sub = subs[i];
@@ -579,13 +517,12 @@ async function doGenerate() {
   }
 
   if (allProxies.length === 0) {
-    toast('所有订阅均未能识别到代理节点', 'error');
-    btn.disabled = false; btn.textContent = '生成订阅链接'; return;
+    showToast('所有订阅均未能识别到代理节点', 'error');
+    btn.disabled = false; btn.textContent = '生成配置和订阅链接'; return;
   }
 
   // Step 2: 去重
-  var seen = {};
-  var unique = [];
+  var seen = {}, unique = [];
   for (var i = 0; i < allProxies.length; i++) {
     var key = allProxies[i].server + ':' + allProxies[i].port;
     if (!seen[key]) { seen[key] = true; unique.push(allProxies[i]); }
@@ -598,97 +535,101 @@ async function doGenerate() {
 
   for (var i = 0; i < allProxies.length; i++) {
     var p = allProxies[i];
-    var country = p._country || '未知';
-    var baseName = p._origName || p.name;
-    p.name = p._source + '-' + country + '-' + baseName;
+    p.name = p._source + '-' + (p._country || '未知') + '-' + (p._origName || p.name);
   }
 
-  // Step 4: 生成配置（与 chrome-extension popup.js 一致：展开保留所有字段，只删除内部标记字段）
+  // Step 4: 生成配置
   btn.textContent = '生成配置...';
 
-  var lType = 'mixed';
-  var startPort = 8000;
-  var lAddr = '127.0.0.1';
+  var lType = 'mixed', startPort = 8000, lAddr = '127.0.0.1';
 
-  // 清理内部标记字段，保留所有代理原始字段
-  var config = {};
-  config.proxies = allProxies.map(function(p) {
-    // 删除内部字段：_source, _checked, _origName, _country
+  // 清理内部字段 + 端口注入
+  var finalProxies = allProxies.map(function(p, i) {
     var clean = {};
     for (var k in p) {
       if (k !== '_source' && k !== '_checked' && k !== '_origName' && k !== '_country') {
         clean[k] = p[k];
       }
     }
+    var parts = clean.name.split('-');
+    if (parts.length >= 2) {
+      var port = startPort + i;
+      clean.name = parts[0] + '-' + parts[1] + '-' + port + '-' + parts.slice(2).join('-');
+    }
     return clean;
   });
 
-  // 端口号注入节点名：来源-国家-原名 → 来源-国家-端口-原名
-  config.proxies = config.proxies.map(function(p, i) {
-    var parts = p.name.split('-');
-    if (parts.length >= 2) {
-      var source = parts[0];
-      var country = parts[1];
-      var rest = parts.slice(2).join('-');
-      var port = startPort + i;
-      p.name = source + '-' + country + '-' + port + '-' + rest;
-    }
-    return p;
-  });
-
   // 监听器列表
-  config.listeners = config.proxies.map(function(p, i) {
-    return {
-      name: p.type + '-' + p.name,
-      type: lType,
-      address: lAddr,
-      port: startPort + i,
-      proxy: p.name,
-    };
+  var listeners = finalProxies.map(function(p, i) {
+    return { name: p.type + '-' + p.name, type: lType, address: lAddr, port: startPort + i, proxy: p.name };
   });
 
-  // proxy-groups
-  var proxyNames = config.proxies.map(function(p) { return p.name; });
-  config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
-  config.rules = ['MATCH,Proxy'];
+  // Step 5: 解析基础配置，保留所有原有字段，只替换 proxies 和添加 listeners
+  btn.textContent = '合并配置...';
+  var baseYamlText = document.getElementById('baseYaml').value.trim();
+  var config = {};
 
-  // DNS fake-ip 配置
-  config.dns = {
-    enable: true,
-    'enhanced-mode': 'fake-ip',
-    'fake-ip-range': '198.18.0.1/16',
-    'default-nameserver': ['114.114.114.114', '223.5.5.5'],
-    'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
-    nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
-    fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
-    'fallback-filter': { geoip: true, geoip_code: 'CN' },
-  };
+  if (baseYamlText) {
+    try {
+      config = jsyaml.load(baseYamlText) || {};
+    } catch (e) {
+      showToast('基础 YAML 解析失败: ' + e.message, 'error');
+      btn.disabled = false; btn.textContent = '生成配置和订阅链接'; return;
+    }
+  }
 
-  // 将下划线 key 转为连字符（Clash Meta 标准格式）
-  config = normalizeKeys(config);
-  var yaml = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
+  // 替换 proxies
+  config.proxies = finalProxies;
 
-  // Step 5: 生成订阅链接
-  var bytes = new TextEncoder().encode(yaml);
-  var binary = '';
-  for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  var b64 = btoa(binary);
-  var basePath = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/sub?data=';
-  var apiUrl = basePath + encodeURIComponent(b64);
+  // 添加 listeners
+  config.listeners = listeners;
 
-  document.getElementById('subLinkInput').value = apiUrl;
-  document.getElementById('resultArea').style.display = '';
+  // 更新 proxy-groups 中的代理列表
+  var proxyNames = finalProxies.map(function(p) { return p.name; });
+  if (config['proxy-groups'] && config['proxy-groups'].length > 0) {
+    for (var i = 0; i < config['proxy-groups'].length; i++) {
+      config['proxy-groups'][i].proxies = proxyNames;
+    }
+  } else {
+    config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
+  }
 
-  var msg = '订阅链接已生成！共 ' + config.proxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + config.proxies.length - 1);
-  if (failNames.length > 0) msg += '（' + failNames.length + ' 个订阅失败: ' + failNames.join(', ') + '）';
-  toast(msg, fail > 0 ? 'warning' : 'success');
-  btn.disabled = false; btn.textContent = '生成订阅链接';
-}
+  // 如果有 dns 配置，保留原配置不覆盖
+  // 如果没有 dns，补充默认 fake-ip 配置
+  if (!config.dns) {
+    config.dns = {
+      enable: true, 'enhanced-mode': 'fake-ip', 'fake-ip-range': '198.18.0.1/16',
+      'default-nameserver': ['114.114.114.114', '223.5.5.5'],
+      'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
+      nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
+      fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
+      'fallback-filter': { geoip: true, geoip_code: 'CN' },
+    };
+  }
 
-function toast(msg, type) {
-  var el = document.getElementById('genStatus');
-  el.innerHTML = '<span class="toast toast-' + type + '">' + msg + '</span>';
-  setTimeout(function() { el.innerHTML = ''; }, 5000);
+  // Step 6: 生成 YAML 和订阅链接
+  try {
+    var yaml = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
+
+    // 订阅链接
+    var bytes = new TextEncoder().encode(yaml);
+    var binary = '';
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    var b64 = btoa(binary);
+    var basePath = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/sub?data=';
+    var apiUrl = basePath + encodeURIComponent(b64);
+
+    document.getElementById('subLinkInput').value = apiUrl;
+    document.getElementById('resultArea').style.display = '';
+
+    var msg = '完成！共 ' + finalProxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + finalProxies.length - 1);
+    if (failNames.length > 0) msg += '（' + failNames.length + ' 个订阅失败: ' + failNames.join(', ') + '）';
+    showToast(msg, fail > 0 ? 'warning' : 'success');
+  } catch (e) {
+    showToast('YAML 序列化失败: ' + e.message, 'error');
+  }
+
+  btn.disabled = false; btn.textContent = '生成配置和订阅链接';
 }
 
 async function copyLink() {
@@ -696,10 +637,10 @@ async function copyLink() {
   if (!input.value) return;
   try {
     await navigator.clipboard.writeText(input.value);
-    toast('链接已复制到剪贴板', 'success');
+    showToast('链接已复制到剪贴板', 'success');
   } catch {
     input.select(); document.execCommand('copy');
-    toast('链接已复制到剪贴板', 'success');
+    showToast('链接已复制到剪贴板', 'success');
   }
 }
 
@@ -711,13 +652,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 恢复已保存的订阅
   try {
-    var saved = localStorage.getItem('cmg3_subList');
-    if (saved) {
-      var subs = JSON.parse(saved);
-      if (subs && subs.length > 0) { subs.forEach(function(s) { addSubRow(s.name, s.url); }); return; }
-    }
+    var savedSubs = localStorage.getItem('cmg_subList');
+    if (savedSubs) {
+      var subs = JSON.parse(savedSubs);
+      if (subs && subs.length > 0) { subs.forEach(function(s) { addSubRow(s.name, s.url); }); }
+      else { addSubRow('', ''); }
+    } else { addSubRow('', ''); }
+  } catch (_) { addSubRow('', ''); }
+
+  // 恢复已保存的 baseYaml
+  try {
+    var savedYaml = localStorage.getItem('cmg_baseYaml');
+    if (savedYaml) document.getElementById('baseYaml').value = savedYaml;
   } catch (_) {}
-  addSubRow('', '');
 });
 </script>
 
