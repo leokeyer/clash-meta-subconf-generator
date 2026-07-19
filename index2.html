@@ -366,13 +366,22 @@ function extractCountryFromName(name) {
 async function lookupCountry(server) {
   if (countryCache[server]) return countryCache[server];
   try {
-    var resp = await fetch('http://ip-api.com/json/' + encodeURIComponent(server) + '?fields=country');
+    var ipApiUrl = 'http://ip-api.com/json/' + encodeURIComponent(server) + '?fields=country';
+    var proxyBase = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/proxy?url=';
+    var useProxy = location.protocol !== 'file:';
+    var resp;
+    if (useProxy) {
+      resp = await fetch(proxyBase + encodeURIComponent(ipApiUrl));
+    } else {
+      resp = await fetch(ipApiUrl);
+    }
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     var cn = COUNTRY_MAP[data.country] || data.country || '未知';
     countryCache[server] = cn;
     return cn;
   } catch (e) {
+    console.warn('GeoIP 查询失败:', server, e.message);
     countryCache[server] = '未知';
     return '未知';
   }
@@ -579,63 +588,65 @@ async function doGenerate() {
     p.name = p._source + '-' + country + '-' + baseName;
   }
 
-  // Step 4: 生成配置（内置默认值）
+  // Step 4: 生成配置（与 chrome-extension popup.js 一致：展开保留所有字段，只删除内部标记字段）
   btn.textContent = '生成配置...';
 
   var lType = 'mixed';
   var startPort = 8000;
   var lAddr = '127.0.0.1';
 
-  // 清理内部字段 + 端口注入节点名
-  var finalProxies = allProxies.map(function(p, i) {
-    var parts = p.name.split('-');
-    var port = startPort + i;
-    var newName = parts.length >= 2
-      ? parts[0] + '-' + parts[1] + '-' + port + '-' + parts.slice(2).join('-')
-      : p.name;
-    return {
-      name: newName, type: p.type, server: p.server, port: p.port,
-      uuid: p.uuid, password: p.password, cipher: p.cipher, udp: p.udp,
-      alterId: p.alterId, network: p.network, tls: p.tls,
-      servername: p.servername, sni: p.sni, alpn: p.alpn,
-      'client-fingerprint': p.client_fingerprint, 'skip-cert-verify': p.skip_cert_verify,
-      ws_opts: p.ws_opts, grpc_opts: p.grpc_opts, h2_opts: p.h2_opts,
-      reality_opts: p.reality_opts, flow: p.flow,
-      obfs: p.obfs, ports: p.ports,
-      'congestion-controller': p.congestion_controller,
-      'disable-sni': p.disable_sni, 'reduce-rtt': p.reduce_rtt,
-      'udp-relay-mode': p.udp_relay_mode,
-    };
-  });
-
-  // 清理 undefined 字段
-  finalProxies = finalProxies.map(function(p) {
+  // 清理内部标记字段，保留所有代理原始字段
+  var config = {};
+  config.proxies = allProxies.map(function(p) {
+    // 删除内部字段：_source, _checked, _origName, _country
     var clean = {};
-    for (var k in p) { if (p[k] !== undefined) clean[k] = p[k]; }
+    for (var k in p) {
+      if (k !== '_source' && k !== '_checked' && k !== '_origName' && k !== '_country') {
+        clean[k] = p[k];
+      }
+    }
     return clean;
   });
 
-  var proxyNames = finalProxies.map(function(p) { return p.name; });
-
-  var listeners = finalProxies.map(function(p, i) {
-    return { name: p.type + '-' + p.name, type: lType, address: lAddr, port: startPort + i, proxy: p.name };
+  // 端口号注入节点名：来源-国家-原名 → 来源-国家-端口-原名
+  config.proxies = config.proxies.map(function(p, i) {
+    var parts = p.name.split('-');
+    if (parts.length >= 2) {
+      var source = parts[0];
+      var country = parts[1];
+      var rest = parts.slice(2).join('-');
+      var port = startPort + i;
+      p.name = source + '-' + country + '-' + port + '-' + rest;
+    }
+    return p;
   });
 
-  var config = {
-    proxies: finalProxies,
-    listeners: listeners,
-    'proxy-groups': [{ name: 'Proxy', type: 'select', proxies: proxyNames }],
-    rules: ['MATCH,Proxy'],
-    dns: {
-      enable: true,
-      'enhanced-mode': 'fake-ip',
-      'fake-ip-range': '198.18.0.1/16',
-      'default-nameserver': ['114.114.114.114', '223.5.5.5'],
-      'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
-      nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
-      fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
-      'fallback-filter': { geoip: true, geoip_code: 'CN' },
-    },
+  // 监听器列表
+  config.listeners = config.proxies.map(function(p, i) {
+    return {
+      name: p.type + '-' + p.name,
+      type: lType,
+      address: lAddr,
+      port: startPort + i,
+      proxy: p.name,
+    };
+  });
+
+  // proxy-groups
+  var proxyNames = config.proxies.map(function(p) { return p.name; });
+  config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
+  config.rules = ['MATCH,Proxy'];
+
+  // DNS fake-ip 配置
+  config.dns = {
+    enable: true,
+    'enhanced-mode': 'fake-ip',
+    'fake-ip-range': '198.18.0.1/16',
+    'default-nameserver': ['114.114.114.114', '223.5.5.5'],
+    'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
+    nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
+    fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
+    'fallback-filter': { geoip: true, geoip_code: 'CN' },
   };
 
   var yaml = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
@@ -651,7 +662,7 @@ async function doGenerate() {
   document.getElementById('subLinkInput').value = apiUrl;
   document.getElementById('resultArea').style.display = '';
 
-  var msg = '订阅链接已生成！共 ' + finalProxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + finalProxies.length - 1);
+  var msg = '订阅链接已生成！共 ' + config.proxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + config.proxies.length - 1);
   if (failNames.length > 0) msg += '（' + failNames.length + ' 个订阅失败: ' + failNames.join(', ') + '）';
   toast(msg, fail > 0 ? 'warning' : 'success');
   btn.disabled = false; btn.textContent = '生成订阅链接';
