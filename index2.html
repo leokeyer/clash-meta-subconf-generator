@@ -107,7 +107,7 @@
 <div class="container">
   <div class="header">
     <h1>Clash Meta 多订阅配置生成器</h1>
-    <p>添加多个订阅链接 + 粘贴现有配置 → 一键生成完整配置和订阅链接</p>
+    <p>添加多个订阅链接 → 一键生成配置和订阅链接</p>
   </div>
 
   <!-- ===== 第一步：订阅链接 ===== -->
@@ -119,13 +119,7 @@
     </div>
   </div>
 
-  <!-- ===== 第二步：现有配置 ===== -->
-  <div class="card">
-    <h2><span class="num">2</span> 现有 Clash Meta 配置（粘贴你当前的完整配置，其中的 proxies 将被替换）</h2>
-    <textarea id="baseYaml" placeholder="port: 7890&#10;socks-port: 7891&#10;allow-lan: true&#10;mode: Rule&#10;...&#10;proxies:&#10;  - name: xxx&#10;    ...&#10;proxy-groups:&#10;  - ...&#10;rules:&#10;  - ..." style="min-height:200px;"></textarea>
-  </div>
-
-  <!-- ===== 生成按钮 ===== -->
+  <!-- ===== 第二步：生成 ===== -->
   <div class="card" style="text-align:center;">
     <button class="btn btn-primary" id="btnGenerate" style="font-size:1rem;padding:12px 36px;">生成配置和订阅链接</button>
     <div id="genStatus"></div>
@@ -139,8 +133,7 @@
       <button class="btn btn-primary btn-sm" id="btnCopyLink" style="flex-shrink:0;">复制链接</button>
     </div>
     <p class="hint">
-      已合并原配置的所有字段（sniffer、dns、proxy-groups、rules 等），仅替换 proxies 并新增 listeners。
-      监听器类型 <code>mixed</code>，端口 <code>8000</code> 起递增，地址 <code>127.0.0.1</code>。
+      监听器类型 <code>mixed</code>，端口 <code>8000</code> 起递增，地址 <code>127.0.0.1</code>。DNS 仅开启不启用 fake-ip，使用系统 DNS。
       部署到 Vercel 后链接可用。
     </p>
   </div>
@@ -491,9 +484,6 @@ async function doGenerate() {
   if (subs.length === 0) { showToast('请至少添加一个订阅链接', 'warning'); return; }
   saveSubs();
 
-  // 保存 baseYaml
-  try { localStorage.setItem('cmg_baseYaml', document.getElementById('baseYaml').value); } catch (_) {}
-
   var btn = document.getElementById('btnGenerate');
   btn.disabled = true; btn.textContent = '正在抓取订阅...';
 
@@ -564,48 +554,19 @@ async function doGenerate() {
     return { name: p.type + '-' + p.name, type: lType, address: lAddr, port: startPort + i, proxy: p.name };
   });
 
-  // Step 5: 解析基础配置，保留所有原有字段，只替换 proxies 和添加 listeners
-  btn.textContent = '合并配置...';
-  var baseYamlText = document.getElementById('baseYaml').value.trim();
+  // Step 5: 生成最终配置（纯生成，不含基础 YAML 合并）
+  btn.textContent = '生成配置...';
   var config = {};
 
-  if (baseYamlText) {
-    try {
-      config = jsyaml.load(baseYamlText) || {};
-    } catch (e) {
-      showToast('基础 YAML 解析失败: ' + e.message, 'error');
-      btn.disabled = false; btn.textContent = '生成配置和订阅链接'; return;
-    }
-  }
-
-  // 替换 proxies
   config.proxies = finalProxies;
-
-  // 添加 listeners
   config.listeners = listeners;
 
-  // 更新 proxy-groups 中的代理列表
   var proxyNames = finalProxies.map(function(p) { return p.name; });
-  if (config['proxy-groups'] && config['proxy-groups'].length > 0) {
-    for (var i = 0; i < config['proxy-groups'].length; i++) {
-      config['proxy-groups'][i].proxies = proxyNames;
-    }
-  } else {
-    config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
-  }
+  config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
+  config.rules = ['MATCH,Proxy'];
 
-  // 如果有 dns 配置，保留原配置不覆盖
-  // 如果没有 dns，补充默认 fake-ip 配置
-  if (!config.dns) {
-    config.dns = {
-      enable: true, 'enhanced-mode': 'fake-ip', 'fake-ip-range': '198.18.0.1/16',
-      'default-nameserver': ['114.114.114.114', '223.5.5.5'],
-      'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
-      nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
-      fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
-      'fallback-filter': { geoip: true, geoip_code: 'CN' },
-    };
-  }
+  // 最小 DNS 配置：不启用 fake-ip，使用系统 DNS，避免域名节点无法解析
+  config.dns = { enable: true, ipv6: false };
 
   // Step 6: 生成 YAML 和订阅链接
   try {
@@ -660,11 +621,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else { addSubRow('', ''); }
   } catch (_) { addSubRow('', ''); }
 
-  // 恢复已保存的 baseYaml
-  try {
-    var savedYaml = localStorage.getItem('cmg_baseYaml');
-    if (savedYaml) document.getElementById('baseYaml').value = savedYaml;
-  } catch (_) {}
 });
 </script>
 
