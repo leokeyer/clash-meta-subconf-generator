@@ -1,0 +1,7 @@
+{
+  "name": "clash-meta-config-generator",
+  "private": true,
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

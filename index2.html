@@ -133,8 +133,8 @@
       <button class="btn btn-primary btn-sm" id="btnCopyLink" style="flex-shrink:0;">复制链接</button>
     </div>
     <p class="hint">
-      监听器类型 <code>mixed</code>，端口 <code>8000</code> 起递增，地址 <code>127.0.0.1</code>。DNS 仅开启不启用 fake-ip，使用系统 DNS。
-      部署到 Vercel 后链接可用。
+      每次在 Clash 中刷新此链接时，服务端会重新从订阅源抓取最新节点并生成配置。
+      监听器类型 <code>mixed</code>，端口 <code>8000</code> 起递增，地址 <code>127.0.0.1</code>。DNS 仅开启不启用 fake-ip。
     </p>
   </div>
 </div>
@@ -568,22 +568,18 @@ async function doGenerate() {
   // 最小 DNS 配置：不启用 fake-ip，使用系统 DNS，避免域名节点无法解析
   config.dns = { enable: true, ipv6: false };
 
-  // Step 6: 生成 YAML 和订阅链接
+  // Step 6: 生成订阅链接（编码订阅列表而非 YAML，每次刷新动态抓取）
   try {
-    var yaml = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
-
-    // 订阅链接
-    var bytes = new TextEncoder().encode(yaml);
-    var binary = '';
-    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    var b64 = btoa(binary);
-    var basePath = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/sub?data=';
-    var apiUrl = basePath + encodeURIComponent(b64);
+    // 构建订阅列表 JSON 并 base64 编码
+    var urlsJson = JSON.stringify(subs);
+    var urlsB64 = btoa(unescape(encodeURIComponent(urlsJson)));
+    var basePath = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/sub?urls=';
+    var apiUrl = basePath + encodeURIComponent(urlsB64);
 
     document.getElementById('subLinkInput').value = apiUrl;
     document.getElementById('resultArea').style.display = '';
 
-    var msg = '完成！共 ' + finalProxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + finalProxies.length - 1);
+    var msg = '订阅链接已生成！共 ' + config.proxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + config.proxies.length - 1) + '。每次 Clash 刷新时会动态抓取最新节点';
     if (failNames.length > 0) msg += '（' + failNames.length + ' 个订阅失败: ' + failNames.join(', ') + '）';
     showToast(msg, fail > 0 ? 'warning' : 'success');
   } catch (e) {
