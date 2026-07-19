@@ -443,8 +443,21 @@ function saveSubs() {
   try { localStorage.setItem('cmg3_subList', JSON.stringify(getAllSubs())); } catch (_) {}
 }
 
+function getNextSubNumber() {
+  var rows = document.querySelectorAll('#subList .sub-row');
+  var max = 0;
+  rows.forEach(function(row) {
+    var name = row.querySelector('.sub-name').value.trim();
+    var m = name.match(/^订阅(\d+)$/);
+    if (m) { var n = parseInt(m[1]); if (n > max) max = n; }
+  });
+  return max + 1;
+}
+
 function addSubRow(name, url) {
-  document.getElementById('subList').appendChild(createSubRow(name || '', url || ''));
+  // 如果名称为空，自动编号为 订阅1, 订阅2...
+  var displayName = name || '订阅' + getNextSubNumber();
+  document.getElementById('subList').appendChild(createSubRow(displayName, url || ''));
   saveSubs();
 }
 
@@ -523,6 +536,7 @@ async function doGenerate() {
   // Step 1: 抓取所有订阅
   var allProxies = [];
   var ok = 0, fail = 0;
+  var failNames = [];
 
   for (var i = 0; i < subs.length; i++) {
     var sub = subs[i];
@@ -530,14 +544,14 @@ async function doGenerate() {
     btn.textContent = label + sub.name + ' 抓取中...';
     try {
       var proxies = await fetchOneSub(sub.url);
-      if (proxies.length === 0) { fail++; continue; }
+      if (proxies.length === 0) { fail++; failNames.push(sub.name + '(未识别到节点)'); continue; }
       for (var j = 0; j < proxies.length; j++) {
         proxies[j]._source = sub.name;
         proxies[j]._origName = proxies[j].name;
       }
       allProxies = allProxies.concat(proxies);
       ok++;
-    } catch (e) { fail++; console.error('抓取失败:', sub.name, e.message); }
+    } catch (e) { fail++; failNames.push(sub.name + '(' + e.message + ')'); }
   }
 
   if (allProxies.length === 0) {
@@ -637,7 +651,9 @@ async function doGenerate() {
   document.getElementById('subLinkInput').value = apiUrl;
   document.getElementById('resultArea').style.display = '';
 
-  toast('订阅链接已生成！共 ' + finalProxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + finalProxies.length - 1), 'success');
+  var msg = '订阅链接已生成！共 ' + finalProxies.length + ' 个节点，端口 ' + startPort + ' ~ ' + (startPort + finalProxies.length - 1);
+  if (failNames.length > 0) msg += '（' + failNames.length + ' 个订阅失败: ' + failNames.join(', ') + '）';
+  toast(msg, fail > 0 ? 'warning' : 'success');
   btn.disabled = false; btn.textContent = '生成订阅链接';
 }
 
