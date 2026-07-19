@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clash Meta 高级配置生成器 - 多订阅版</title>
+<title>Clash Meta 多订阅配置生成器</title>
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 <style>
   :root {
@@ -28,17 +28,12 @@
     line-height: 1.6;
     min-height: 100vh;
   }
-  .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
 
-  /* Header */
   .header { text-align: center; padding: 36px 0 28px; }
-  .header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.02em; color: var(--text); }
+  .header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.02em; }
   .header p { color: var(--text-secondary); margin-top: 6px; font-size: .925rem; }
-  .nav-links { margin-top: 10px; font-size: .85rem; }
-  .nav-links a { color: var(--primary); text-decoration: none; margin: 0 8px; }
-  .nav-links a:hover { text-decoration: underline; }
 
-  /* Steps layout */
   .steps { display: grid; gap: 24px; }
   .step {
     background: var(--surface);
@@ -58,7 +53,6 @@
     flex-shrink: 0;
   }
 
-  /* Form elements */
   label { display: block; font-size: .875rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
   textarea, select, input[type="number"], input[type="text"] {
     width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
@@ -68,12 +62,10 @@
   }
   textarea:focus, select:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
   textarea { min-height: 140px; }
-  select, input[type="number"], input[type="text"] { font-family: inherit; }
+  select, input[type="number"] { font-family: inherit; }
   .form-group { margin-bottom: 16px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 
-  /* Buttons */
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 9px 18px; border: none; border-radius: 8px;
@@ -85,12 +77,9 @@
   .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
   .btn-outline:hover { background: var(--bg); }
   .btn-sm { padding: 6px 12px; font-size: .8rem; }
-  .btn-xs { padding: 3px 8px; font-size: .7rem; }
+  .btn-xs { padding: 4px 10px; font-size: .75rem; }
   .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .btn-danger { background: var(--danger); color: #fff; }
-  .btn-danger:hover { background: #dc2626; }
 
-  /* Status toasts */
   .toast {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; border-radius: 8px; font-size: .825rem; font-weight: 500;
@@ -102,14 +91,9 @@
   .toast-error { background: #fef2f2; color: #991b1b; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
-  /* Toggle / checkbox */
-  .toggle-row { display: flex; align-items: center; gap: 10px; }
-  .toggle-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
-  .toggle-row label { margin-bottom: 0; cursor: pointer; color: var(--text); font-weight: 500; }
   .mode-section { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
   .mode-title { font-weight: 600; font-size: .9rem; color: var(--primary); margin-bottom: 12px; }
 
-  /* Proxy list display */
   .proxy-badge {
     display: inline-flex; align-items: center; gap: 4px;
     background: var(--bg); border: 1px solid var(--border);
@@ -118,11 +102,9 @@
   .proxy-badge .type { font-weight: 700; color: var(--primary); text-transform: uppercase; }
   #proxyPreview { max-height: 200px; overflow-y: auto; padding: 4px 0; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
 
-  /* Output */
-  #outputYaml { min-height: 280px; background: #0f172a; color: #e2e8f0; border-color: #334155; font-size: .825rem; line-height: 1.55; }
+  #outputYaml { min-height: 260px; background: #0f172a; color: #e2e8f0; border-color: #334155; font-size: .825rem; line-height: 1.55; }
   #outputYaml:focus { border-color: var(--primary); }
 
-  /* Subscription rows */
   .sub-row {
     display: flex; gap: 6px; align-items: center; margin-bottom: 8px;
   }
@@ -142,20 +124,22 @@
     display: inline-flex; align-items: center; justify-content: center;
     transition: all .15s;
   }
-  .sub-row .btn-remove:hover {
-    background: var(--danger); color: #fff; border-color: var(--danger);
-  }
+  .sub-row .btn-remove:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-  /* Responsive */
+  #subLinkArea {
+    background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius);
+    padding: 16px; margin-top: 16px;
+  }
+  #subLinkArea label { color: #166534; }
+
   @media (max-width: 640px) {
-    .form-row, .form-row-3 { grid-template-columns: 1fr; }
+    .form-row-3 { grid-template-columns: 1fr; }
     .header h1 { font-size: 1.4rem; }
     .step { padding: 16px; }
     .sub-row { flex-wrap: wrap; }
     .sub-row input.sub-name { width: 100%; }
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 </style>
@@ -164,22 +148,17 @@
 
 <div class="container">
   <div class="header">
-    <h1>Clash Meta 高级配置生成器</h1>
-    <p>多订阅链接 + 节点链接 + 现有 YAML → 链式代理 / 多出口监听器</p>
-    <div class="nav-links">
-      <a href="index.html">基础版</a>
-      <a href="index2.html" style="font-weight:600;">多订阅版</a>
-    </div>
+    <h1>Clash Meta 多订阅配置生成器</h1>
+    <p>添加多个订阅链接 → 检测国家并重命名 → 一键生成多出口监听器配置</p>
   </div>
 
-  <div class="steps" id="app">
-    <!-- ========== 第一步：节点导入 ========== -->
+  <div class="steps">
+    <!-- ========== 第一步：订阅导入 ========== -->
     <div class="step">
-      <div class="step-header"><span class="step-num">1</span> 节点导入</div>
+      <div class="step-header"><span class="step-num">1</span> 订阅导入</div>
 
-      <!-- A. 订阅链接 -->
       <div class="form-group">
-        <label>订阅链接（每行一个订阅，可添加多个，数据自动保存到本地）</label>
+        <label>订阅链接（可添加多个，数据自动保存到本地）</label>
         <div id="subList"></div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button class="btn btn-outline btn-sm" id="btnAddSub">+ 添加订阅</button>
@@ -188,80 +167,22 @@
         <span id="subFetchStatus" style="display:inline-block;margin-top:8px;"></span>
       </div>
 
-      <!-- B. 手动粘贴链接 -->
-      <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
-        <label for="linkInput">或手动粘贴节点链接（每行一个，支持 ss / vmess / vless / trojan / hysteria2 / tuic）</label>
-        <textarea id="linkInput" placeholder="ss://xxxxx
-vmess://xxxxx
-trojan://xxxxx
-vless://xxxxx
-hysteria2://xxxxx
-tuic://xxxxx" style="min-height:80px;"></textarea>
-        <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
-          <input type="text" id="manualImportName" placeholder="导入名称" style="width:100px;flex-shrink:0;" value="手动">
-          <button class="btn btn-primary btn-sm" id="btnParseLinks">解析链接</button>
-          <span id="linkStatus"></span>
-        </div>
-      </div>
-
-      <!-- C. 粘贴现有 YAML -->
-      <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
-        <label for="yamlInput">或粘贴现有 YAML 配置（提取 proxies 并保留原 dns/rules/sniffer 等）</label>
-        <textarea id="yamlInput" placeholder="proxies:
-  - name: 香港 01
-    type: vmess
-    server: hk1.example.com
-    port: 443
-    uuid: xxxxx
-    cipher: auto
-    udp: true
-
-dns:
-  enable: true
-  ..." style="min-height:80px;"></textarea>
-      </div>
-
-      <!-- 节点预览 -->
       <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <span style="font-size:.8rem;color:var(--text-secondary);" id="proxyCount">未导入节点</span>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-outline btn-xs" id="btnClearProxies">清除全部</button>
-          </div>
+          <button class="btn btn-outline btn-xs" id="btnClearProxies">清除全部</button>
         </div>
         <div id="proxyPreview"></div>
         <button class="btn btn-primary btn-sm" id="btnDetectCountry" style="margin-top:8px;width:100%;">检测国家并重命名</button>
       </div>
     </div>
 
-    <!-- ========== 第二步：功能设置 ========== -->
+    <!-- ========== 第二步：监听器设置 + 生成 ========== -->
     <div class="step">
-      <div class="step-header"><span class="step-num">2</span> 功能设置</div>
-
-      <!-- 模式 A：链式代理 -->
+      <div class="step-header"><span class="step-num">2</span> 多出口监听器设置</div>
       <div class="mode-section">
-        <div class="mode-title">模式 A — 链式代理（Dialer Proxy）</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="relayProxy">跳板节点 (B) — 中转入口</label>
-            <select id="relayProxy"><option value="">-- 选择跳板节点 --</option></select>
-          </div>
-          <div class="form-group">
-            <label for="exitProxy">出口节点 (A) — 最终出口</label>
-            <select id="exitProxy"><option value="">-- 选择出口节点 --</option></select>
-          </div>
-        </div>
-        <p style="font-size:.8rem;color:var(--text-secondary);">在出口节点 A 中注入 <code>dialer-proxy: B</code>，流量经跳板 B 转发至出口 A。</p>
-      </div>
-
-      <!-- 模式 B：多出口监听器 -->
-      <div class="mode-section">
-        <div class="mode-title">模式 B — 多出口监听器</div>
-        <div class="toggle-row" style="margin-bottom:12px;">
-          <input type="checkbox" id="enableListeners" checked>
-          <label for="enableListeners">为每个节点生成独立监听端口</label>
-        </div>
-        <div class="form-row-3" id="listenerSettings">
+        <div class="mode-title">为每个节点生成独立监听端口</div>
+        <div class="form-row-3">
           <div class="form-group">
             <label for="listenerType">监听器类型</label>
             <select id="listenerType">
@@ -279,36 +200,35 @@ dns:
             <input type="text" id="listenAddr" value="127.0.0.1">
           </div>
         </div>
-        <p style="font-size:.8rem;color:var(--text-secondary);">每个节点分配递增端口，自动补充 DNS fake-ip 配置（如原配置无 DNS）。端口号会注入节点名中。</p>
+        <p style="font-size:.8rem;color:var(--text-secondary);margin-top:4px;">每个节点递增分配端口，自动补充 DNS fake-ip 配置。</p>
       </div>
 
-      <div class="btn-group">
-        <button class="btn btn-primary" id="btnGenerate">生成配置</button>
-        <span id="genStatus"></span>
-      </div>
+      <button class="btn btn-primary" id="btnGenerate" style="width:100%;">生成配置</button>
+      <span id="genStatus" style="display:inline-block;margin-top:8px;"></span>
     </div>
 
-    <!-- ========== 第三步：预览导出 ========== -->
+    <!-- ========== 第三步：预览与订阅链接 ========== -->
     <div class="step">
-      <div class="step-header"><span class="step-num">3</span> 预览与导出</div>
+      <div class="step-header"><span class="step-num">3</span> 预览与订阅链接</div>
       <div class="form-group">
         <label for="outputYaml">生成的 YAML 配置</label>
         <textarea id="outputYaml" readonly placeholder="点击「生成配置」后在此预览..."></textarea>
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary" id="btnCopy">复制到剪贴板</button>
-        <button class="btn btn-outline" id="btnDownload">保存为 .yaml 文件</button>
-        <button class="btn btn-outline" id="btnGenSubLink" style="border-color:var(--primary);color:var(--primary);">生成订阅链接</button>
+        <button class="btn btn-outline btn-sm" id="btnCopy">复制到剪贴板</button>
+        <button class="btn btn-outline btn-sm" id="btnDownload">保存为 .yaml</button>
+        <button class="btn btn-primary" id="btnGenSubLink">生成订阅链接</button>
         <span id="exportStatus"></span>
       </div>
-      <div id="subLinkArea" style="display:none; margin-top:12px;">
-        <label for="subLinkInput">订阅链接（可将此 URL 填入 Clash 客户端的订阅地址中）</label>
-        <div style="display:flex;gap:8px;">
-          <input type="text" id="subLinkInput" readonly style="flex:1;font-family:monospace;font-size:.8rem;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+
+      <div id="subLinkArea" style="display:none;">
+        <label for="subLinkInput">订阅链接（将此 URL 填入 Clash 客户端的订阅地址即可直接导入）</label>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input type="text" id="subLinkInput" readonly style="flex:1;font-family:monospace;font-size:.8rem;padding:8px 12px;border:1px solid #86efac;border-radius:8px;background:#fff;">
           <button class="btn btn-primary btn-sm" id="btnCopySubLink">复制链接</button>
         </div>
-        <p style="font-size:.75rem;color:var(--text-secondary);margin-top:4px;">
-          生成的链接指向 <code>/api/sub</code> 端点（base64 编码）。部署到 Vercel 后即可用于 Clash 客户端订阅。
+        <p style="font-size:.75rem;color:var(--text-secondary);margin-top:6px;">
+          生成的链接指向 <code>/api/sub</code> 端点（base64 编码 YAML）。部署到 Vercel 后，将链接填入 Clash 客户端订阅地址即可直接使用。
         </p>
       </div>
     </div>
@@ -318,9 +238,9 @@ dns:
 <script>
 // ======================== 全局状态 ========================
 let parsedProxies = [];
-let baseConfig = null;
+let generatedYaml = '';
 
-// 英文国名 -> 中文
+// 英文国名 → 中文
 const COUNTRY_MAP = {
   'Japan': '日本', 'South Korea': '韩国', 'Singapore': '新加坡',
   'United States': '美国', 'Hong Kong': '香港', 'Taiwan': '台湾',
@@ -347,14 +267,10 @@ function parseVmess(uri) {
     const b64 = uri.replace('vmess://', '');
     const json = JSON.parse(atob(b64));
     const proxy = {
-      name: json.ps || 'VMess 节点',
-      type: 'vmess',
-      server: json.add,
-      port: parseInt(json.port) || 443,
-      uuid: json.id,
-      alterId: parseInt(json.aid) || 0,
-      cipher: json.scy || 'auto',
-      udp: true,
+      name: json.ps || 'VMess 节点', type: 'vmess',
+      server: json.add, port: parseInt(json.port) || 443,
+      uuid: json.id, alterId: parseInt(json.aid) || 0,
+      cipher: json.scy || 'auto', udp: true,
     };
     if (json.net) proxy.network = json.net;
     if (json.net === 'ws') {
@@ -372,22 +288,16 @@ function parseVmess(uri) {
       if (json.fp) proxy.client_fingerprint = json.fp;
     }
     return proxy;
-  } catch (e) {
-    console.error('VMess 解析失败:', e);
-    return null;
-  }
+  } catch (e) { console.error('VMess 解析失败:', e); return null; }
 }
 
 function parseVless(uri) {
   try {
     const url = new URL(uri);
     const proxy = {
-      name: decodeURIComponent(url.hash?.slice(1) || 'VLESS 节点'),
-      type: 'vless',
-      server: url.hostname,
-      port: parseInt(url.port) || 443,
-      uuid: url.username,
-      udp: true,
+      name: decodeURIComponent(url.hash?.slice(1) || 'VLESS 节点'), type: 'vless',
+      server: url.hostname, port: parseInt(url.port) || 443,
+      uuid: url.username, udp: true,
     };
     const params = url.searchParams;
     proxy.cipher = params.get('encryption') || 'none';
@@ -402,10 +312,7 @@ function parseVless(uri) {
     const security = params.get('security') || 'none';
     if (security === 'reality') {
       proxy.tls = true;
-      proxy.reality_opts = {
-        public_key: params.get('pbk') || '',
-        short_id: params.get('sid') || '',
-      };
+      proxy.reality_opts = { public_key: params.get('pbk') || '', short_id: params.get('sid') || '' };
       if (params.get('sni')) proxy.servername = params.get('sni');
       if (params.get('fp')) proxy.client_fingerprint = params.get('fp');
       if (params.get('flow')) proxy.flow = params.get('flow');
@@ -417,22 +324,16 @@ function parseVless(uri) {
       if (params.get('flow')) proxy.flow = params.get('flow');
     }
     return proxy;
-  } catch (e) {
-    console.error('VLESS 解析失败:', e);
-    return null;
-  }
+  } catch (e) { console.error('VLESS 解析失败:', e); return null; }
 }
 
 function parseTrojan(uri) {
   try {
     const url = new URL(uri);
     const proxy = {
-      name: decodeURIComponent(url.hash?.slice(1) || 'Trojan 节点'),
-      type: 'trojan',
-      server: url.hostname,
-      port: parseInt(url.port) || 443,
-      password: url.username,
-      udp: true,
+      name: decodeURIComponent(url.hash?.slice(1) || 'Trojan 节点'), type: 'trojan',
+      server: url.hostname, port: parseInt(url.port) || 443,
+      password: url.username, udp: true,
     };
     const params = url.searchParams;
     const type = params.get('type') || 'tcp';
@@ -443,135 +344,91 @@ function parseTrojan(uri) {
     } else if (type === 'grpc') {
       proxy.grpc_opts = { grpc_service_name: params.get('serviceName') || '' };
     }
-    const security = params.get('security') || 'tls';
-    if (security === 'tls') {
+    if ((params.get('security') || 'tls') === 'tls') {
       proxy.tls = true;
       if (params.get('sni')) proxy.servername = params.get('sni');
       if (params.get('fp')) proxy.client_fingerprint = params.get('fp');
       if (params.get('alpn')) proxy.alpn = params.get('alpn').split(',').map(s => s.trim());
     }
     return proxy;
-  } catch (e) {
-    console.error('Trojan 解析失败:', e);
-    return null;
-  }
+  } catch (e) { console.error('Trojan 解析失败:', e); return null; }
 }
 
 function parseSS(uri) {
   try {
     const withoutHash = uri.split('#')[0];
-    const hashPart = uri.includes('#') ? uri.split('#')[1] : '';
-    const name = hashPart ? decodeURIComponent(hashPart) : 'SS 节点';
-
-    let rest = withoutHash.replace('ss://', '');
-    let method, password, server, port;
-
+    const name = uri.includes('#') ? decodeURIComponent(uri.split('#')[1]) : 'SS 节点';
+    let rest = withoutHash.replace('ss://', ''), method, password, server, port;
     if (rest.includes('@')) {
-      const [b64Part, addrPart] = rest.split('@');
-      const decoded = atob(b64Part);
-      const colonIdx = decoded.indexOf(':');
-      method = decoded.slice(0, colonIdx);
-      password = decoded.slice(colonIdx + 1);
-      const lastColon = addrPart.lastIndexOf(':');
-      server = addrPart.slice(0, lastColon);
+      const [b64, addr] = rest.split('@');
+      const d = atob(b64), ci = d.indexOf(':');
+      method = d.slice(0, ci); password = d.slice(ci + 1);
+      const lc = addr.lastIndexOf(':');
+      server = addr.slice(0, lc);
       if (server.startsWith('[') && server.endsWith(']')) server = server.slice(1, -1);
-      port = parseInt(addrPart.slice(lastColon + 1)) || 8388;
+      port = parseInt(addr.slice(lc + 1)) || 8388;
     } else {
-      const decoded = atob(rest);
-      const [cred, addr] = decoded.split('@');
-      const cIdx = cred.indexOf(':');
-      method = cred.slice(0, cIdx);
-      password = cred.slice(cIdx + 1);
-      const lastColon = addr.lastIndexOf(':');
-      server = addr.slice(0, lastColon);
+      const d = atob(rest), [cred, addr] = d.split('@'), ci = cred.indexOf(':');
+      method = cred.slice(0, ci); password = cred.slice(ci + 1);
+      const lc = addr.lastIndexOf(':');
+      server = addr.slice(0, lc);
       if (server.startsWith('[') && server.endsWith(']')) server = server.slice(1, -1);
-      port = parseInt(addr.slice(lastColon + 1)) || 8388;
+      port = parseInt(addr.slice(lc + 1)) || 8388;
     }
-
     return { name, type: 'ss', server, port, cipher: method, password, udp: true };
-  } catch (e) {
-    console.error('SS 解析失败:', e);
-    return null;
-  }
+  } catch (e) { console.error('SS 解析失败:', e); return null; }
 }
 
 function parseHysteria2(uri) {
   try {
     const url = new URL(uri);
-    const name = decodeURIComponent(url.hash?.slice(1) || 'Hysteria2 节点');
     const params = url.searchParams;
-    const password = url.username || params.get('auth') || '';
-
     const proxy = {
-      name, type: 'hysteria2',
-      server: url.hostname,
-      port: parseInt(url.port) || 443,
-      password, udp: true,
+      name: decodeURIComponent(url.hash?.slice(1) || 'Hysteria2 节点'), type: 'hysteria2',
+      server: url.hostname, port: parseInt(url.port) || 443,
+      password: url.username || params.get('auth') || '', udp: true,
     };
-
     if (params.get('sni')) proxy.sni = params.get('sni');
-    if (params.get('insecure') === '1' || params.get('insecure') === 'true') {
-      proxy.skip_cert_verify = true;
-    }
+    if (params.get('insecure') === '1' || params.get('insecure') === 'true') proxy.skip_cert_verify = true;
     if (params.get('mport')) proxy.ports = params.get('mport');
     if (params.get('obfs')) {
       proxy.obfs = { type: params.get('obfs') };
       if (params.get('obfs-password')) proxy.obfs.password = params.get('obfs-password');
     }
     if (params.get('alpn')) proxy.alpn = params.get('alpn').split(',').map(s => s.trim());
-
     return proxy;
-  } catch (e) {
-    console.error('Hysteria2 解析失败:', e);
-    return null;
-  }
+  } catch (e) { console.error('Hysteria2 解析失败:', e); return null; }
 }
 
 function parseTuic(uri) {
   try {
     const url = new URL(uri);
-    const name = decodeURIComponent(url.hash?.slice(1) || 'TUIC 节点');
     const params = url.searchParams;
-
     const proxy = {
-      name, type: 'tuic',
-      server: url.hostname,
-      port: parseInt(url.port) || 443,
-      uuid: url.username,
-      password: url.password || '',
-      udp: true,
+      name: decodeURIComponent(url.hash?.slice(1) || 'TUIC 节点'), type: 'tuic',
+      server: url.hostname, port: parseInt(url.port) || 443,
+      uuid: url.username, password: url.password || '', udp: true,
     };
-
     if (params.get('congestion_control')) proxy.congestion_controller = params.get('congestion_control');
     if (params.get('alpn')) proxy.alpn = params.get('alpn').split(',').map(s => s.trim());
     if (params.get('sni')) proxy.sni = params.get('sni');
-    if (params.get('allow_insecure') === '1' || params.get('allow_insecure') === 'true') {
-      proxy.skip_cert_verify = true;
-    }
-    if (params.get('disable_sni') === '1' || params.get('disable_sni') === 'true') {
-      proxy.disable_sni = true;
-    }
-    if (params.get('reduce_rtt') === '1' || params.get('reduce_rtt') === 'true') {
-      proxy.reduce_rtt = true;
-    }
+    if (params.get('allow_insecure') === '1' || params.get('allow_insecure') === 'true') proxy.skip_cert_verify = true;
+    if (params.get('disable_sni') === '1' || params.get('disable_sni') === 'true') proxy.disable_sni = true;
+    if (params.get('reduce_rtt') === '1' || params.get('reduce_rtt') === 'true') proxy.reduce_rtt = true;
     if (params.get('udp_relay_mode')) proxy.udp_relay_mode = params.get('udp_relay_mode');
-
     return proxy;
-  } catch (e) {
-    console.error('TUIC 解析失败:', e);
-    return null;
-  }
+  } catch (e) { console.error('TUIC 解析失败:', e); return null; }
 }
 
 function parseLink(link) {
-  const trimmed = link.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith('vmess://')) return parseVmess(trimmed);
-  if (trimmed.startsWith('vless://')) return parseVless(trimmed);
-  if (trimmed.startsWith('trojan://')) return parseTrojan(trimmed);
-  if (trimmed.startsWith('ss://')) return parseSS(trimmed);
-  if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) return parseHysteria2(trimmed);
-  if (trimmed.startsWith('tuic://')) return parseTuic(trimmed);
+  const t = link.trim();
+  if (!t) return null;
+  if (t.startsWith('vmess://')) return parseVmess(t);
+  if (t.startsWith('vless://')) return parseVless(t);
+  if (t.startsWith('trojan://')) return parseTrojan(t);
+  if (t.startsWith('ss://')) return parseSS(t);
+  if (t.startsWith('hysteria2://') || t.startsWith('hy2://')) return parseHysteria2(t);
+  if (t.startsWith('tuic://')) return parseTuic(t);
   return null;
 }
 
@@ -580,33 +437,26 @@ function parseLink(link) {
 const countryCache = {};
 
 const FLAG_TO_COUNTRY = {
-  '🇭🇰': '香港', '🇺🇸': '美国', '🇯🇵': '日本', '🇳🇱': '荷兰',
-  '🇷🇺': '俄罗斯', '🇩🇪': '德国', '🇨🇭': '瑞士', '🇫🇷': '法国',
-  '🇬🇧': '英国', '🇸🇪': '瑞典', '🇧🇬': '保加利亚', '🇦🇹': '奥地利',
-  '🇮🇪': '爱尔兰', '🇹🇷': '土耳其', '🇭🇺': '匈牙利', '🇰🇷': '韩国',
-  '🇨🇳': '中国', '🇨🇦': '加拿大', '🇦🇺': '澳大利亚', '🇦🇪': '阿联酋',
-  '🇮🇳': '印度', '🇮🇩': '印尼', '🇧🇷': '巴西', '🇦🇷': '阿根廷',
-  '🇨🇱': '智利', '🇸🇬': '新加坡', '🇲🇾': '马来西亚', '🇹🇭': '泰国',
-  '🇻🇳': '越南', '🇵🇭': '菲律宾', '🇮🇹': '意大利', '🇪🇸': '西班牙',
-  '🇳🇴': '挪威', '🇩🇰': '丹麦', '🇫🇮': '芬兰', '🇧🇪': '比利时',
-  '🇵🇱': '波兰', '🇨🇿': '捷克', '🇷🇴': '罗马尼亚', '🇿🇦': '南非',
-  '🇲🇴': '澳门',
+  '🇭🇰': '香港','🇺🇸': '美国','🇯🇵': '日本','🇳🇱': '荷兰','🇷🇺': '俄罗斯','🇩🇪': '德国',
+  '🇨🇭': '瑞士','🇫🇷': '法国','🇬🇧': '英国','🇸🇪': '瑞典','🇧🇬': '保加利亚','🇦🇹': '奥地利',
+  '🇮🇪': '爱尔兰','🇹🇷': '土耳其','🇭🇺': '匈牙利','🇰🇷': '韩国','🇨🇳': '中国','🇨🇦': '加拿大',
+  '🇦🇺': '澳大利亚','🇦🇪': '阿联酋','🇮🇳': '印度','🇮🇩': '印尼','🇧🇷': '巴西','🇦🇷': '阿根廷',
+  '🇨🇱': '智利','🇸🇬': '新加坡','🇲🇾': '马来西亚','🇹🇭': '泰国','🇻🇳': '越南','🇵🇭': '菲律宾',
+  '🇮🇹': '意大利','🇪🇸': '西班牙','🇳🇴': '挪威','🇩🇰': '丹麦','🇫🇮': '芬兰','🇧🇪': '比利时',
+  '🇵🇱': '波兰','🇨🇿': '捷克','🇷🇴': '罗马尼亚','🇿🇦': '南非','🇲🇴': '澳门',
 };
 
 const KEYWORD_TO_COUNTRY = {
-  'hong kong': '香港', 'usa': '美国', 'japan': '日本', 'netherlands': '荷兰',
-  'russia': '俄罗斯', 'germany': '德国', 'switzerland': '瑞士', 'france': '法国',
-  'united kingdom': '英国', 'sweden': '瑞典', 'bulgaria': '保加利亚', 'austria': '奥地利',
-  'ireland': '爱尔兰', 'turkey': '土耳其', 'hungary': '匈牙利', 'korea': '韩国',
-  'taiwan': '台湾', 'canada': '加拿大', 'australia': '澳大利亚',
-  'united arab emirates': '阿联酋', 'india': '印度', 'indonesia': '印尼',
-  'brazil': '巴西', 'argentina': '阿根廷', 'chile': '智利', 'singapore': '新加坡',
-  'malaysia': '马来西亚', 'thailand': '泰国', 'vietnam': '越南',
-  'philippines': '菲律宾', 'italy': '意大利', 'spain': '西班牙',
-  'norway': '挪威', 'denmark': '丹麦', 'finland': '芬兰', 'belgium': '比利时',
-  'poland': '波兰', 'seattle': '美国', 'los angeles': '美国', 'san jose': '美国',
-  'sydney': '澳大利亚', 'moscow': '俄罗斯', 'st. petersburg': '俄罗斯',
-  'london': '英国', 'amsterdam': '荷兰', 'frankfurt': '德国',
+  'hong kong': '香港','usa': '美国','japan': '日本','netherlands': '荷兰','russia': '俄罗斯',
+  'germany': '德国','switzerland': '瑞士','france': '法国','united kingdom': '英国','sweden': '瑞典',
+  'bulgaria': '保加利亚','austria': '奥地利','ireland': '爱尔兰','turkey': '土耳其','hungary': '匈牙利',
+  'korea': '韩国','taiwan': '台湾','canada': '加拿大','australia': '澳大利亚',
+  'united arab emirates': '阿联酋','india': '印度','indonesia': '印尼','brazil': '巴西',
+  'argentina': '阿根廷','chile': '智利','singapore': '新加坡','malaysia': '马来西亚',
+  'thailand': '泰国','vietnam': '越南','philippines': '菲律宾','italy': '意大利','spain': '西班牙',
+  'norway': '挪威','denmark': '丹麦','finland': '芬兰','belgium': '比利时','poland': '波兰',
+  'seattle': '美国','los angeles': '美国','san jose': '美国','sydney': '澳大利亚',
+  'moscow': '俄罗斯','st. petersburg': '俄罗斯','london': '英国','amsterdam': '荷兰','frankfurt': '德国',
 };
 
 function extractCountryFromName(name) {
@@ -636,44 +486,17 @@ async function lookupCountry(server) {
   }
 }
 
-// ======================== 从文本提取代理 ========================
-
-function extractProxiesFromText(txt) {
-  let result = [];
-  try {
-    const cfg = jsyaml.load(txt);
-    if (cfg && cfg.proxies && Array.isArray(cfg.proxies)) {
-      return cfg.proxies;
-    }
-  } catch (_) {}
-
-  const lines = txt.split('\n').filter(l => l.trim());
-  for (let i = 0; i < lines.length; i++) {
-    const p = parseLink(lines[i]);
-    if (p) result.push(p);
-  }
-  return result;
-}
-
 // ======================== 订阅行管理 ========================
 
-let subRowCounter = 0;
-
 function createSubRow(name, url) {
-  subRowCounter++;
   const row = document.createElement('div');
   row.className = 'sub-row';
   row.innerHTML =
     '<input class="sub-name" type="text" value="' + escapeHtml(name) + '" placeholder="订阅名">' +
     '<input class="sub-url" type="text" value="' + escapeHtml(url) + '" placeholder="https://...">' +
     '<button class="btn-remove" title="移除">x</button>';
-  row.querySelector('.btn-remove').addEventListener('click', function() {
-    row.remove();
-    saveSubs();
-  });
-  row.querySelectorAll('input').forEach(function(inp) {
-    inp.addEventListener('input', saveSubs);
-  });
+  row.querySelector('.btn-remove').addEventListener('click', function() { row.remove(); saveSubs(); });
+  row.querySelectorAll('input').forEach(function(inp) { inp.addEventListener('input', saveSubs); });
   return row;
 }
 
@@ -689,156 +512,98 @@ function getAllSubs() {
 }
 
 function saveSubs() {
-  const subs = getAllSubs();
-  try {
-    localStorage.setItem('cmg_subList', JSON.stringify(subs));
-  } catch (_) {}
+  try { localStorage.setItem('cmg2_subList', JSON.stringify(getAllSubs())); } catch (_) {}
 }
 
 function addSubRow(name, url) {
-  const list = document.getElementById('subList');
-  const row = createSubRow(name || '', url || '');
-  list.appendChild(row);
+  document.getElementById('subList').appendChild(createSubRow(name || '', url || ''));
   saveSubs();
 }
 
-// ======================== 订阅抓取 ========================
+// ======================== 抓取订阅 ========================
+
+function extractProxiesFromText(txt) {
+  let result = [];
+  try {
+    const cfg = jsyaml.load(txt);
+    if (cfg && cfg.proxies && Array.isArray(cfg.proxies)) return cfg.proxies;
+  } catch (_) {}
+  const lines = txt.split('\n').filter(function(l) { return l.trim(); });
+  for (let i = 0; i < lines.length; i++) {
+    const p = parseLink(lines[i]);
+    if (p) result.push(p);
+  }
+  return result;
+}
 
 async function fetchOneSubscription(url) {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   let rawText = await resp.text();
-
-  if (!rawText || rawText.trim().length === 0) {
-    throw new Error('返回空内容');
-  }
-
+  if (!rawText || rawText.trim().length === 0) throw new Error('返回空内容');
   let proxies = extractProxiesFromText(rawText);
-
   if (proxies.length === 0) {
     try {
       const decoded = atob(rawText.trim());
-      if (decoded) {
-        proxies = extractProxiesFromText(decoded);
-      }
+      if (decoded) proxies = extractProxiesFromText(decoded);
     } catch (_) {}
   }
-
   return proxies;
 }
-
-async function fetchAllSubscriptions() {
-  const subs = getAllSubs();
-  if (subs.length === 0) {
-    showToast('subFetchStatus', '请至少添加一个订阅链接', 'warning');
-    return;
-  }
-
-  saveSubs();
-  const el = document.getElementById('subFetchStatus');
-
-  let allNewProxies = [];
-  let successCount = 0;
-  let failCount = 0;
-
-  for (let i = 0; i < subs.length; i++) {
-    const sub = subs[i];
-    const label = subs.length > 1 ? '[' + (i + 1) + '/' + subs.length + ']' : '';
-    el.innerHTML = '<span class="toast toast-info">' + label + ' ' + sub.name + ' 正在抓取...</span>';
-
-    try {
-      let proxies = await fetchOneSubscription(sub.url);
-      if (proxies.length === 0) {
-        failCount++;
-        console.warn('订阅未识别到节点:', sub.name);
-        continue;
-      }
-
-      for (const p of proxies) {
-        p._source = sub.name;
-        p._origName = p.name;
-        p._checked = false;
-      }
-
-      allNewProxies = allNewProxies.concat(proxies);
-      successCount++;
-    } catch (e) {
-      failCount++;
-      console.error('抓取失败:', sub.name, e.message);
-    }
-  }
-
-  if (allNewProxies.length === 0) {
-    el.innerHTML = '<span class="toast toast-warning">所有订阅均未能识别到代理节点</span>';
-    setTimeout(function() { el.innerHTML = ''; }, 5000);
-    return;
-  }
-
-  mergeProxies(allNewProxies);
-  renderProxyPreview();
-  updateProxySelects();
-
-  const unchecked = parsedProxies.filter(function(p) { return p._source && !p._checked; }).length;
-  let msg = successCount + ' 个订阅抓取完成，共 ' + parsedProxies.length + ' 个节点';
-  if (unchecked > 0) msg += '，' + unchecked + ' 个待查国家';
-  const type = failCount > 0 ? 'warning' : 'success';
-  el.innerHTML = '<span class="toast toast-' + type + '">' + msg + '</span>';
-  setTimeout(function() { el.innerHTML = ''; }, 5000);
-}
-
-// ======================== 合并与管理 ========================
 
 function mergeProxies(newProxies) {
   const seen = new Set(parsedProxies.map(function(p) { return p.server + ':' + p.port; }));
   const unique = newProxies.filter(function(p) {
     const key = p.server + ':' + p.port;
     if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    seen.add(key); return true;
   });
   parsedProxies = parsedProxies.concat(unique);
 }
 
-/** 解析手动粘贴的链接 */
-function parseAllLinks() {
-  const input = document.getElementById('linkInput').value;
-  const importName = document.getElementById('manualImportName').value.trim() || '手动';
-  const lines = input.split('\n').filter(function(line) { return line.trim(); });
-  const newProxies = [];
+async function fetchAllSubscriptions() {
+  const subs = getAllSubs();
+  if (subs.length === 0) { showToast('subFetchStatus', '请至少添加一个订阅链接', 'warning'); return; }
+  saveSubs();
+  const el = document.getElementById('subFetchStatus');
+  let allNew = [], ok = 0, fail = 0;
 
-  for (let i = 0; i < lines.length; i++) {
-    const proxy = parseLink(lines[i]);
-    if (proxy) {
-      proxy._source = importName;
-      proxy._origName = proxy.name;
-      proxy._checked = false;
-      newProxies.push(proxy);
-    }
+  for (let i = 0; i < subs.length; i++) {
+    const sub = subs[i];
+    const label = subs.length > 1 ? '[' + (i + 1) + '/' + subs.length + '] ' : '';
+    el.innerHTML = '<span class="toast toast-info">' + label + sub.name + ' 正在抓取...</span>';
+    try {
+      let proxies = await fetchOneSubscription(sub.url);
+      if (proxies.length === 0) { fail++; continue; }
+      for (const p of proxies) {
+        p._source = sub.name; p._origName = p.name; p._checked = false;
+      }
+      allNew = allNew.concat(proxies); ok++;
+    } catch (e) { fail++; console.error('抓取失败:', sub.name, e.message); }
   }
 
-  if (newProxies.length === 0) {
-    showToast('linkStatus', parsedProxies.length === 0 ? '未识别到有效节点链接' : '未识别到新的有效节点链接', 'warning');
-    return;
+  if (allNew.length === 0) {
+    el.innerHTML = '<span class="toast toast-warning">所有订阅均未能识别到代理节点</span>';
+    setTimeout(function() { el.innerHTML = ''; }, 5000); return;
   }
 
-  mergeProxies(newProxies);
-  showToast('linkStatus', '已导入 ' + newProxies.length + ' 个节点（总计 ' + parsedProxies.length + ' 个），点击「检测国家」统一查询', 'info');
+  mergeProxies(allNew);
   renderProxyPreview();
-  updateProxySelects();
+  const unchecked = parsedProxies.filter(function(p) { return p._source && !p._checked; }).length;
+  let msg = ok + ' 个订阅抓取完成，共 ' + parsedProxies.length + ' 个节点';
+  if (unchecked > 0) msg += '，' + unchecked + ' 个待查国家';
+  el.innerHTML = '<span class="toast toast-' + (fail > 0 ? 'warning' : 'success') + '">' + msg + '</span>';
+  setTimeout(function() { el.innerHTML = ''; }, 5000);
 }
 
-/** 检测国家并重命名 */
+// ======================== 国家检测并重命名 ========================
+
 async function detectAndRenameAll() {
   const unchecked = parsedProxies.filter(function(p) { return p._source && !p._checked; });
-  if (unchecked.length === 0) {
-    showToast('subFetchStatus', '所有节点已检测过国家', 'info');
-    return;
-  }
+  if (unchecked.length === 0) { showToast('subFetchStatus', '所有节点已检测过国家', 'info'); return; }
 
   const btn = document.getElementById('btnDetectCountry');
-  btn.disabled = true;
-  btn.textContent = '检测中...';
-
+  btn.disabled = true; btn.textContent = '检测中...';
   const el = document.getElementById('subFetchStatus');
   el.innerHTML = '<span class="toast toast-info">正在检测 ' + unchecked.length + ' 个节点国家...</span>';
 
@@ -854,17 +619,13 @@ async function detectAndRenameAll() {
     const country = countryCache[p.server] || '未知';
     const baseName = p._origName || p.name;
     p.name = p._source + '-' + country + '-' + baseName;
-    p._origName = baseName;
-    p._checked = true;
+    p._origName = baseName; p._checked = true;
   }
 
   renderProxyPreview();
-  updateProxySelects();
   el.innerHTML = '<span class="toast toast-success">完成！已为 ' + unchecked.length + ' 个节点标注国家</span>';
   setTimeout(function() { el.innerHTML = ''; }, 4000);
-
-  btn.disabled = false;
-  btn.textContent = '检测国家并重命名';
+  btn.disabled = false; btn.textContent = '检测国家并重命名';
 }
 
 // ======================== UI 渲染 ========================
@@ -872,41 +633,16 @@ async function detectAndRenameAll() {
 function renderProxyPreview() {
   const container = document.getElementById('proxyPreview');
   const counter = document.getElementById('proxyCount');
-  if (parsedProxies.length === 0) {
-    container.innerHTML = '';
-    counter.textContent = '未导入节点';
-    return;
-  }
+  if (parsedProxies.length === 0) { container.innerHTML = ''; counter.textContent = '未导入节点'; return; }
   const unchecked = parsedProxies.filter(function(p) { return p._source && !p._checked; }).length;
-  let status = '共 ' + parsedProxies.length + ' 个节点';
-  if (unchecked > 0) status += '（' + unchecked + ' 个待查国家）';
-  counter.textContent = status;
-
+  counter.textContent = '共 ' + parsedProxies.length + ' 个节点' + (unchecked > 0 ? '（' + unchecked + ' 个待查国家）' : '');
   const show = parsedProxies.slice(0, 30);
   let html = show.map(function(p) {
-    const tag = p._source && !p._checked ? ' 待查' : '';
+    const tag = p._source && !p._checked ? ' ⏳' : '';
     return '<span class="proxy-badge"><span class="type">' + p.type.toUpperCase() + '</span> ' + escapeHtml(p.name) + tag + '</span>';
   }).join('');
-  if (parsedProxies.length > 30) {
-    html += '<span class="proxy-badge">... 还有 ' + (parsedProxies.length - 30) + ' 个</span>';
-  }
+  if (parsedProxies.length > 30) html += '<span class="proxy-badge">... 还有 ' + (parsedProxies.length - 30) + ' 个</span>';
   container.innerHTML = html;
-}
-
-function updateProxySelects() {
-  const names = parsedProxies.map(function(p) { return p.name; });
-  [document.getElementById('relayProxy'), document.getElementById('exitProxy')].forEach(function(sel) {
-    const current = sel.value;
-    sel.innerHTML = '<option value="">-- 选择节点 --</option>' +
-      names.map(function(n) {
-        return '<option value="' + escapeHtml(n) + '" ' + (n === current ? 'selected' : '') + '>' + escapeHtml(n) + '</option>';
-      }).join('');
-  });
-}
-
-function toggleListenerSettings() {
-  const checked = document.getElementById('enableListeners').checked;
-  document.getElementById('listenerSettings').style.display = checked ? '' : 'none';
 }
 
 function showToast(elId, msg, type) {
@@ -915,118 +651,65 @@ function showToast(elId, msg, type) {
   setTimeout(function() { el.innerHTML = ''; }, 4000);
 }
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // ======================== 配置生成 ========================
 
 function generateConfig() {
-  const yamlText = document.getElementById('yamlInput').value.trim();
-  let config = {};
+  if (parsedProxies.length === 0) { showToast('genStatus', '请先抓取订阅并检测国家', 'warning'); return; }
 
-  // Step 1: 解析基础 YAML（保留所有原有字段）
-  if (yamlText) {
-    try {
-      config = jsyaml.load(yamlText) || {};
-      if (typeof config !== 'object' || Array.isArray(config)) {
-        showToast('genStatus', 'YAML 格式错误：顶层必须是映射', 'error');
-        return;
-      }
-    } catch (e) {
-      showToast('genStatus', 'YAML 解析失败: ' + e.message, 'error');
-      return;
-    }
-  }
+  const lType = document.getElementById('listenerType').value;
+  const startPort = parseInt(document.getElementById('startPort').value) || 8000;
+  const lAddr = document.getElementById('listenAddr').value || '127.0.0.1';
 
-  if (parsedProxies.length === 0) {
-    showToast('genStatus', '请先解析节点链接或抓取订阅', 'warning');
-    return;
-  }
-
-  // Step 2: 替换代理列表（清理内部字段）
-  config.proxies = parsedProxies.map(function(p) {
+  // 清理内部字段
+  let proxies = parsedProxies.map(function(p) {
     const { _source, _checked, _origName, ...clean } = p;
     return clean;
   });
 
-  // 模式 B — 多出口监听器（先处理，端口号要写进节点名）
-  const enableListeners = document.getElementById('enableListeners').checked;
-
-  if (enableListeners) {
-    const lType = document.getElementById('listenerType').value;
-    const startPort = parseInt(document.getElementById('startPort').value) || 8000;
-    const lAddr = document.getElementById('listenAddr').value || '127.0.0.1';
-
-    // 将监听端口号插入节点名：来源-国家-端口-原名
-    config.proxies = config.proxies.map(function(p, i) {
-      const parts = p.name.split('-');
-      if (parts.length >= 2) {
-        const source = parts[0];
-        const country = parts[1];
-        const rest = parts.slice(2).join('-');
-        const port = startPort + i;
-        return { ...p, name: source + '-' + country + '-' + port + '-' + rest };
-      }
-      return p;
-    });
-
-    config.listeners = config.proxies.map(function(p, i) {
-      return {
-        name: p.type + '-' + p.name,
-        type: lType,
-        address: lAddr,
-        port: startPort + i,
-        proxy: p.name,
-      };
-    });
-
-    // 仅在原配置没有 dns 时补充默认 dns 配置
-    if (!config.dns) {
-      config.dns = {
-        enable: true,
-        'enhanced-mode': 'fake-ip',
-        'fake-ip-range': '198.18.0.1/16',
-        'default-nameserver': ['114.114.114.114', '223.5.5.5'],
-        'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
-        nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
-        fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
-        'fallback-filter': { geoip: true, geoip_code: 'CN' },
-      };
+  // 端口号注入节点名：来源-国家-端口-原名
+  proxies = proxies.map(function(p, i) {
+    const parts = p.name.split('-');
+    if (parts.length >= 2) {
+      const port = startPort + i;
+      return { ...p, name: parts[0] + '-' + parts[1] + '-' + port + '-' + parts.slice(2).join('-') };
     }
-  }
+    return p;
+  });
 
-  // 更新 proxy-groups
-  const proxyNames = config.proxies.map(function(p) { return p.name; });
-  if (config['proxy-groups'] && config['proxy-groups'].length > 0) {
-    for (let i = 0; i < config['proxy-groups'].length; i++) {
-      config['proxy-groups'][i].proxies = proxyNames;
-    }
-  } else {
-    config['proxy-groups'] = [{ name: 'Proxy', type: 'select', proxies: proxyNames }];
-    config.rules = ['MATCH,Proxy'];
-  }
+  // 构建监听器列表
+  const listeners = proxies.map(function(p, i) {
+    return { name: p.type + '-' + p.name, type: lType, address: lAddr, port: startPort + i, proxy: p.name };
+  });
 
-  // 模式 A — 链式代理
-  const relayName = document.getElementById('relayProxy').value;
-  const exitName = document.getElementById('exitProxy').value;
+  const proxyNames = proxies.map(function(p) { return p.name; });
 
-  if (relayName && exitName) {
-    if (relayName === exitName) {
-      showToast('genStatus', '跳板节点和出口节点不能相同', 'error');
-      return;
-    }
-    config.proxies = config.proxies.map(function(p) {
-      if (p.name === exitName) {
-        return { ...p, 'dialer-proxy': relayName };
-      }
-      return p;
-    });
-    showToast('genStatus', '链式代理已设置: ' + exitName + ' -> ' + relayName, 'success');
-  }
+  const config = {
+    proxies: proxies,
+    listeners: listeners,
+    'proxy-groups': [{ name: 'Proxy', type: 'select', proxies: proxyNames }],
+    rules: ['MATCH,Proxy'],
+    dns: {
+      enable: true,
+      'enhanced-mode': 'fake-ip',
+      'fake-ip-range': '198.18.0.1/16',
+      'default-nameserver': ['114.114.114.114', '223.5.5.5'],
+      'fake-ip-filter': ['*.lan', 'localhost.ptlogin2.qq.com'],
+      nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query'],
+      fallback: ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'],
+      'fallback-filter': { geoip: true, geoip_code: 'CN' },
+    },
+  };
 
-  // 输出 YAML
   try {
-    const output = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
-    document.getElementById('outputYaml').value = output;
-    const info = enableListeners ? '已包含 DNS fake-ip 配置和 ' + config.proxies.length + ' 个监听器' : '';
-    showToast('genStatus', '配置生成成功！' + info, 'success');
+    generatedYaml = jsyaml.dump(config, { lineWidth: -1, quotingType: '"' });
+    document.getElementById('outputYaml').value = generatedYaml;
+    showToast('genStatus', '配置生成成功！共 ' + proxies.length + ' 个节点，监听端口 ' + startPort + ' ~ ' + (startPort + proxies.length - 1), 'success');
   } catch (e) {
     showToast('genStatus', 'YAML 序列化失败: ' + e.message, 'error');
   }
@@ -1035,52 +718,32 @@ function generateConfig() {
 // ======================== 导出 ========================
 
 async function copyToClipboard() {
-  const text = document.getElementById('outputYaml').value;
-  if (!text) {
-    showToast('exportStatus', '没有可复制的内容，请先生成配置', 'warning');
-    return;
-  }
+  if (!generatedYaml) { showToast('exportStatus', '请先生成配置', 'warning'); return; }
   try {
-    await navigator.clipboard.writeText(text);
-    showToast('exportStatus', '配置已复制到剪贴板', 'success');
+    await navigator.clipboard.writeText(generatedYaml);
+    showToast('exportStatus', '已复制到剪贴板', 'success');
   } catch {
-    const ta = document.getElementById('outputYaml');
-    ta.select();
-    document.execCommand('copy');
-    showToast('exportStatus', '配置已复制到剪贴板', 'success');
+    const ta = document.getElementById('outputYaml'); ta.select(); document.execCommand('copy');
+    showToast('exportStatus', '已复制到剪贴板', 'success');
   }
 }
 
 function downloadToFile() {
-  const text = document.getElementById('outputYaml').value;
-  if (!text) {
-    showToast('exportStatus', '没有可保存的内容，请先生成配置', 'warning');
-    return;
-  }
-  const blob = new Blob([text], { type: 'application/x-yaml' });
+  if (!generatedYaml) { showToast('exportStatus', '请先生成配置', 'warning'); return; }
+  const blob = new Blob([generatedYaml], { type: 'application/x-yaml' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'clash-meta-config.yaml';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const a = document.createElement('a'); a.href = url; a.download = 'clash-meta-config.yaml';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('exportStatus', '文件已下载: clash-meta-config.yaml', 'success');
 }
 
 function generateSubLink() {
-  const text = document.getElementById('outputYaml').value;
-  if (!text) {
-    showToast('exportStatus', '没有可生成的内容，请先生成配置', 'warning');
-    return;
-  }
+  if (!generatedYaml) { showToast('exportStatus', '请先生成配置', 'warning'); return; }
 
-  const bytes = new TextEncoder().encode(text);
+  const bytes = new TextEncoder().encode(generatedYaml);
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
   const b64 = btoa(binary);
 
   const basePath = location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api/sub?data=';
@@ -1088,134 +751,46 @@ function generateSubLink() {
 
   document.getElementById('subLinkInput').value = apiUrl;
   document.getElementById('subLinkArea').style.display = '';
-
-  showToast('exportStatus',
-    '订阅链接已生成（配置 ' + bytes.length + ' 字节 -> base64 ' + b64.length + ' 字符）。部署到 Vercel 后即可用于 Clash 订阅',
-    'success');
+  showToast('exportStatus', '订阅链接已生成！部署到 Vercel 后即可直接填入 Clash 客户端使用', 'success');
 }
 
 async function copySubLink() {
   const input = document.getElementById('subLinkInput');
-  if (!input.value) {
-    showToast('exportStatus', '没有可复制的链接，请先生成订阅链接', 'warning');
-    return;
-  }
+  if (!input.value) { showToast('exportStatus', '请先生成订阅链接', 'warning'); return; }
   try {
     await navigator.clipboard.writeText(input.value);
     showToast('exportStatus', '订阅链接已复制到剪贴板', 'success');
   } catch {
-    input.select();
-    document.execCommand('copy');
+    input.select(); document.execCommand('copy');
     showToast('exportStatus', '订阅链接已复制到剪贴板', 'success');
   }
 }
 
-// ======================== 辅助函数 ========================
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// ======================== 事件绑定与初始化 ========================
+// ======================== 初始化 ========================
 document.addEventListener('DOMContentLoaded', function() {
-  // 按钮事件
   document.getElementById('btnFetchSub').addEventListener('click', fetchAllSubscriptions);
   document.getElementById('btnAddSub').addEventListener('click', function() { addSubRow('', ''); });
-  document.getElementById('btnParseLinks').addEventListener('click', parseAllLinks);
+  document.getElementById('btnDetectCountry').addEventListener('click', detectAndRenameAll);
+  document.getElementById('btnClearProxies').addEventListener('click', function() {
+    parsedProxies = []; generatedYaml = '';
+    renderProxyPreview(); document.getElementById('outputYaml').value = '';
+    document.getElementById('subLinkArea').style.display = 'none';
+    showToast('subFetchStatus', '已清除所有节点', 'info');
+  });
   document.getElementById('btnGenerate').addEventListener('click', generateConfig);
   document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
   document.getElementById('btnDownload').addEventListener('click', downloadToFile);
   document.getElementById('btnGenSubLink').addEventListener('click', generateSubLink);
   document.getElementById('btnCopySubLink').addEventListener('click', copySubLink);
-  document.getElementById('btnDetectCountry').addEventListener('click', detectAndRenameAll);
-  document.getElementById('btnClearProxies').addEventListener('click', function() {
-    parsedProxies = [];
-    baseConfig = null;
-    renderProxyPreview();
-    updateProxySelects();
-    document.getElementById('outputYaml').value = '';
-    showToast('linkStatus', '已清除所有节点', 'info');
-  });
 
-  // 监听器开关
-  document.getElementById('enableListeners').addEventListener('change', toggleListenerSettings);
-
-  // YAML 输入变化时自动解析
-  document.getElementById('yamlInput').addEventListener('change', function() {
-    const yamlText = document.getElementById('yamlInput').value.trim();
-    if (!yamlText) { baseConfig = null; return; }
-    try {
-      baseConfig = jsyaml.load(yamlText) || {};
-      if (baseConfig.proxies && Array.isArray(baseConfig.proxies)) {
-        const existingNames = new Set(parsedProxies.map(function(p) { return p.name; }));
-        const fromYaml = baseConfig.proxies.filter(function(p) {
-          if (!p.name) return false;
-          if (existingNames.has(p.name)) return false;
-          existingNames.add(p.name);
-          return true;
-        });
-        if (fromYaml.length > 0) {
-          const importName = document.getElementById('manualImportName').value.trim() || 'YAML';
-          for (let i = 0; i < fromYaml.length; i++) {
-            const p = fromYaml[i];
-            const detected = extractCountryFromName(p.name);
-            p._source = importName;
-            p._origName = p.name;
-            if (detected) {
-              p.name = importName + '-' + detected + '-' + p.name;
-              p._checked = true;
-            } else {
-              p._checked = false;
-            }
-          }
-          mergeProxies(fromYaml);
-          renderProxyPreview();
-          updateProxySelects();
-          const detectedCount = fromYaml.filter(function(p) { return p._checked; }).length;
-          showToast('linkStatus', '从 YAML 中读取 ' + fromYaml.length + ' 个节点（' + detectedCount + ' 个识别出国家，' + (fromYaml.length - detectedCount) + ' 个待查）', 'success');
-        }
-      }
-    } catch {
-      baseConfig = null;
-    }
-  });
-
-  // 自动保存：手动粘贴链接、YAML 配置、导入名称到 localStorage
-  function autoSaveInputs() {
-    try {
-      localStorage.setItem('cmg_inputs', JSON.stringify({
-        linkInput: document.getElementById('linkInput').value,
-        yamlInput: document.getElementById('yamlInput').value,
-        importName: document.getElementById('manualImportName').value,
-      }));
-    } catch (_) {}
-  }
-  document.getElementById('linkInput').addEventListener('input', autoSaveInputs);
-  document.getElementById('yamlInput').addEventListener('input', autoSaveInputs);
-  document.getElementById('manualImportName').addEventListener('input', autoSaveInputs);
-
-  // 恢复已保存的数据
+  // 恢复已保存的订阅列表
   try {
-    const savedInputs = localStorage.getItem('cmg_inputs');
-    if (savedInputs) {
-      const data = JSON.parse(savedInputs);
-      if (data.linkInput) document.getElementById('linkInput').value = data.linkInput;
-      if (data.yamlInput) document.getElementById('yamlInput').value = data.yamlInput;
-      if (data.importName) document.getElementById('manualImportName').value = data.importName;
-    }
-
-    const savedSubs = localStorage.getItem('cmg_subList');
+    const savedSubs = localStorage.getItem('cmg2_subList');
     if (savedSubs) {
       const subs = JSON.parse(savedSubs);
-      if (subs && subs.length > 0) {
-        subs.forEach(function(s) { addSubRow(s.name, s.url); });
-        return;
-      }
+      if (subs && subs.length > 0) { subs.forEach(function(s) { addSubRow(s.name, s.url); }); return; }
     }
   } catch (_) {}
-
-  // 默认添加一行空订阅
   addSubRow('', '');
 });
 </script>
